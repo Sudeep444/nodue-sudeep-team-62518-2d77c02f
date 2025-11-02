@@ -24,6 +24,7 @@ interface Faculty {
   name: string;
   email: string;
   designation: string;
+  department: string;
 }
 
 interface SelectedSubject {
@@ -65,8 +66,10 @@ const SubmitNoDueForm = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (department && semester) {
-      fetchSubjects();
+    if (semester) {
+      if (department && semester) {
+        fetchSubjects();
+      }
       fetchFaculty();
     }
   }, [department, semester]);
@@ -117,28 +120,15 @@ const SubmitNoDueForm = () => {
 
   const fetchFaculty = async () => {
     try {
-      // First, get all faculty and HOD role user IDs
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .in('role', ['faculty', 'hod']);
-
-      if (roleError) throw roleError;
-
-      const facultyIds = roleData?.map(r => r.user_id) || [];
-
-      if (facultyIds.length === 0) {
-        setFacultyList([]);
-        return;
-      }
-
-      // Then get staff profiles for those users
+      // Fetch faculty from all departments with specific designations
       const { data, error } = await supabase
         .from('staff_profiles')
-        .select('id, name, email, designation')
-        .eq('department', department as any)
-        .in('id', facultyIds)
-        .eq('is_active', true);
+        .select('id, name, email, designation, department')
+        .in('designation', ['HOD', 'Associate Professor', 'Assistant Professor'])
+        .eq('is_active', true)
+        .order('designation', { ascending: true })
+        .order('department', { ascending: true })
+        .order('name', { ascending: true });
 
       if (error) throw error;
 
@@ -389,9 +379,9 @@ const SubmitNoDueForm = () => {
                                 <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                                   {designation}
                                 </div>
-                                {faculties.map((faculty) => (
+                                 {faculties.map((faculty) => (
                                   <SelectItem key={faculty.id} value={faculty.id} className="pl-6">
-                                    {faculty.name}
+                                    {faculty.name} ({faculty.department})
                                   </SelectItem>
                                 ))}
                               </div>
@@ -463,9 +453,9 @@ const SubmitNoDueForm = () => {
                                     <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                                       {designation}
                                     </div>
-                                    {faculties.map((faculty) => (
+                                     {faculties.map((faculty) => (
                                       <SelectItem key={faculty.id} value={faculty.id} className="pl-6">
-                                        {faculty.name}
+                                        {faculty.name} ({faculty.department})
                                       </SelectItem>
                                     ))}
                                   </div>
