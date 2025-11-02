@@ -92,17 +92,22 @@ export default function LibraryDashboard() {
   };
 
   const fetchApplications = async () => {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('applications')
       .select(`
         *,
-        profiles:student_id (name, usn, email, department, photo, student_type, section)
+        profiles!applications_student_id_fkey (name, usn, email, department, photo, student_type, section)
       `)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching applications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch applications",
+        variant: "destructive"
+      });
     } else {
       setApplications(data || []);
     }
