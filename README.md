@@ -8,9 +8,9 @@
 
 There are several ways of editing your application.
 
-**Use Lovable**
+[**Use Lovable**
 https://lovable.dev/projects/6b08b3d0-847d-4226-ac59-759a44fcb0c5
-Changes made via Lovable will be committed automatically to this repo.
+Changes made via Lovable will be committed automatically to this repo.](https://lovable.dev/projects/afaf6dda-da6f-481e-a461-2887b0b1f544)
 
 **Use your preferred IDE**
 
