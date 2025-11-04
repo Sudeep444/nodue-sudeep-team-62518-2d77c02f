@@ -106,13 +106,20 @@ export default function CollegeOfficeDashboard() {
         profiles:student_id (name, usn, email, department, student_type, photo, section)
       `)
       .in('status', ['college_office_verification_pending', 'college_office_verified', 'rejected'])
-      .or('and(profiles.student_type.eq.hostel,hostel_verified.eq.true),and(profiles.student_type.eq.local,library_verified.eq.true)')
+      .eq('library_verified', true)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching applications:', error);
     } else {
-      setApplications(data || []);
+      // Filter to ensure hostel students have hostel verification
+      const filtered = (data || []).filter(app => {
+        if (app.profiles?.student_type === 'hostel') {
+          return app.hostel_verified === true;
+        }
+        return true; // Local students only need library verification
+      });
+      setApplications(filtered);
     }
     setLoading(false);
   };
