@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      application_subject_faculty: {
+        Row: {
+          application_id: string
+          created_at: string | null
+          faculty_comment: string | null
+          faculty_id: string
+          faculty_verified: boolean | null
+          id: string
+          subject_id: string
+          updated_at: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string | null
+          faculty_comment?: string | null
+          faculty_id: string
+          faculty_verified?: boolean | null
+          id?: string
+          subject_id: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string | null
+          faculty_comment?: string | null
+          faculty_id?: string
+          faculty_verified?: boolean | null
+          id?: string
+          subject_id?: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_subject_faculty_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_subject_faculty_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_subject_faculty_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           batch: string

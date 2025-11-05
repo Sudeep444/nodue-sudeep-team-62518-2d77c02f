@@ -62,16 +62,25 @@ export default function FacultyDashboard() {
   };
 
   const fetchApplications = async () => {
-    if (!staffProfile?.department) return;
+    if (!user?.id) return;
 
+    // Fetch applications where the current faculty member was selected
     const { data, error } = await (supabase as any)
-      .from('applications')
+      .from('application_subject_faculty')
       .select(`
-        *,
-        profiles:student_id (name, usn, email, phone, photo, section, student_type)
+        id,
+        application_id,
+        subject_id,
+        faculty_verified,
+        faculty_comment,
+        verified_at,
+        subjects:subject_id(name, code),
+        applications:application_id(
+          *,
+          profiles:student_id(name, usn, email, phone, photo, section, student_type, department, semester, batch)
+        )
       `)
-      .eq('department', staffProfile.department)
-      .eq('college_office_verified', true)
+      .eq('faculty_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -81,9 +90,37 @@ export default function FacultyDashboard() {
         description: "Failed to fetch applications",
         variant: "destructive"
       });
-    } else {
-      setApplications(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Filter for college office verified applications only
+    const filtered = (data || []).filter(assignment => 
+      assignment.applications?.college_office_verified === true
+    );
+
+    // Group by application ID to show one row per application
+    const applicationMap = new Map();
+    filtered.forEach(assignment => {
+      const appId = assignment.application_id;
+      if (!applicationMap.has(appId)) {
+        applicationMap.set(appId, {
+          ...assignment.applications,
+          faculty_assignments: []
+        });
+      }
+      applicationMap.get(appId).faculty_assignments.push({
+        id: assignment.id,
+        subject_id: assignment.subject_id,
+        subject_name: assignment.subjects?.name,
+        subject_code: assignment.subjects?.code,
+        faculty_verified: assignment.faculty_verified,
+        faculty_comment: assignment.faculty_comment,
+        verified_at: assignment.verified_at
+      });
+    });
+
+    setApplications(Array.from(applicationMap.values()));
     setLoading(false);
   };
 
@@ -92,21 +129,27 @@ export default function FacultyDashboard() {
 
     // Filter by department
     if (selectedDepartment !== "all") {
-      filtered = filtered.filter(app => app.department === selectedDepartment);
+      filtered = filtered.filter(app => app.profiles?.department === selectedDepartment);
     }
 
     // Filter by semester
     if (selectedSemester !== "all") {
-      filtered = filtered.filter(app => app.semester === parseInt(selectedSemester));
+      filtered = filtered.filter(app => app.profiles?.semester === parseInt(selectedSemester));
     }
 
-    // Filter by tab
+    // Filter by tab - check if ALL faculty assignments are verified
     if (activeTab === "pending") {
-      filtered = filtered.filter(app => !app.faculty_verified && app.status !== 'rejected');
+      filtered = filtered.filter(app => {
+        const allVerified = app.faculty_assignments?.every(a => a.faculty_verified);
+        return !allVerified && app.status !== 'rejected';
+      });
     } else if (activeTab === "approved") {
-      filtered = filtered.filter(app => app.faculty_verified);
+      filtered = filtered.filter(app => {
+        const allVerified = app.faculty_assignments?.every(a => a.faculty_verified);
+        return allVerified;
+      });
     } else if (activeTab === "rejected") {
-      filtered = filtered.filter(app => app.status === 'rejected' && !app.faculty_verified);
+      filtered = filtered.filter(app => app.status === 'rejected');
     }
 
     setFilteredApplications(filtered);
@@ -115,35 +158,79 @@ export default function FacultyDashboard() {
   const handleVerification = async (applicationId: string, approved: boolean, comment: string) => {
     setProcessing(true);
     try {
-      const { error } = await (supabase as any)
-        .from('applications')
+      // Update all faculty assignments for this application and current faculty
+      const assignmentsToUpdate = selectedApp.faculty_assignments.map(a => a.id);
+      
+      const { error: updateError } = await (supabase as any)
+        .from('application_subject_faculty')
         .update({
           faculty_verified: approved,
           faculty_comment: comment || null,
-          status: approved ? 'faculty_verified' : 'rejected',
+          verified_at: approved ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', applicationId);
+        .in('id', assignmentsToUpdate);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Create notification for student
-      await (supabase as any)
-        .from('notifications')
-        .insert({
-          user_id: selectedApp.student_id,
-          title: approved ? 'Faculty Verification Approved' : 'Application Rejected',
-          message: approved 
-            ? `Your no-due application has been verified by faculty. ${comment || ''}` 
-            : `Your application was rejected by faculty. Reason: ${comment || 'Not specified'}`,
-          type: approved ? 'approval' : 'rejection',
-          related_entity_type: 'application',
-          related_entity_id: applicationId
-        });
+      // Check if ALL faculty members have verified this application
+      const { data: allAssignments, error: checkError } = await supabase
+        .from('application_subject_faculty')
+        .select('faculty_verified')
+        .eq('application_id', applicationId);
+
+      if (checkError) throw checkError;
+
+      const allVerified = allAssignments?.every(a => a.faculty_verified === true);
+
+      // If all faculty have verified OR if rejected, update the main application
+      if (allVerified || !approved) {
+        const { error: appError } = await (supabase as any)
+          .from('applications')
+          .update({
+            faculty_verified: approved && allVerified,
+            faculty_comment: comment || null,
+            status: !approved ? 'rejected' : (allVerified ? 'faculty_verified' : 'college_office_verified'),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', applicationId);
+
+        if (appError) throw appError;
+
+        // Only notify if all verified or rejected
+        const notificationMessage = !approved 
+          ? `Your application was rejected by faculty. Reason: ${comment || 'Not specified'}`
+          : allVerified 
+            ? `All faculty members have verified your subjects. Your application is now proceeding to HOD verification. ${comment || ''}`
+            : `Faculty verification in progress. ${comment || ''}`;
+
+        await (supabase as any)
+          .from('notifications')
+          .insert({
+            user_id: selectedApp.student_id,
+            title: !approved ? 'Application Rejected' : allVerified ? 'All Faculty Verified' : 'Faculty Verification Update',
+            message: notificationMessage,
+            type: !approved ? 'rejection' : 'approval',
+            related_entity_type: 'application',
+            related_entity_id: applicationId
+          });
+      } else {
+        // Partial verification notification
+        await (supabase as any)
+          .from('notifications')
+          .insert({
+            user_id: selectedApp.student_id,
+            title: 'Subject Verification Completed',
+            message: `${staffProfile?.name || 'A faculty member'} has verified your subjects. Waiting for other faculty verifications. ${comment || ''}`,
+            type: 'info',
+            related_entity_type: 'application',
+            related_entity_id: applicationId
+          });
+      }
 
       toast({
         title: "Success!",
-        description: `Application ${approved ? 'approved' : 'rejected'} successfully`,
+        description: `Subjects ${approved ? 'verified' : 'rejected'} successfully`,
       });
 
       setShowDetailModal(false);
@@ -162,9 +249,15 @@ export default function FacultyDashboard() {
 
   const stats = {
     total: applications.length,
-    pending: applications.filter(a => !a.faculty_verified && a.status !== 'rejected').length,
-    approved: applications.filter(a => a.faculty_verified).length,
-    rejected: applications.filter(a => a.status === 'rejected' && !a.faculty_verified).length
+    pending: applications.filter(a => {
+      const allVerified = a.faculty_assignments?.every(fa => fa.faculty_verified);
+      return !allVerified && a.status !== 'rejected';
+    }).length,
+    approved: applications.filter(a => {
+      const allVerified = a.faculty_assignments?.every(fa => fa.faculty_verified);
+      return allVerified;
+    }).length,
+    rejected: applications.filter(a => a.status === 'rejected').length
   };
 
   const departments = ["CSE", "ISE", "ECE", "EEE", "MECH", "CIVIL"];
@@ -338,9 +431,9 @@ export default function FacultyDashboard() {
                               <span className="font-medium">{app.profiles?.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{app.profiles?.usn}</TableCell>
-                          <TableCell>{app.department}</TableCell>
-                          <TableCell>{app.semester}</TableCell>
+                           <TableCell className="font-mono text-sm">{app.profiles?.usn}</TableCell>
+                          <TableCell>{app.profiles?.department}</TableCell>
+                          <TableCell>{app.profiles?.semester}</TableCell>
                           <TableCell>{new Date(app.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <Button
@@ -389,9 +482,9 @@ export default function FacultyDashboard() {
                               <span className="font-medium">{app.profiles?.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{app.profiles?.usn}</TableCell>
-                          <TableCell>{app.department}</TableCell>
-                          <TableCell>{app.semester}</TableCell>
+                           <TableCell className="font-mono text-sm">{app.profiles?.usn}</TableCell>
+                          <TableCell>{app.profiles?.department}</TableCell>
+                          <TableCell>{app.profiles?.semester}</TableCell>
                           <TableCell>{new Date(app.updated_at).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <Button

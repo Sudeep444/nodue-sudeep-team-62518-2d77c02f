@@ -232,6 +232,40 @@ const SubmitNoDueForm = () => {
 
       if (appError) throw appError;
 
+      // Save subject-faculty mappings
+      const subjectFacultyRecords = [];
+      
+      // Add fixed subjects
+      for (const subject of fixedSubjects) {
+        if (subjectFacultyMap[subject.id]) {
+          subjectFacultyRecords.push({
+            application_id: appData.id,
+            subject_id: subject.id,
+            faculty_id: subjectFacultyMap[subject.id],
+            faculty_verified: false
+          });
+        }
+      }
+      
+      // Add selected electives
+      for (const electiveId of selectedElectives) {
+        if (subjectFacultyMap[electiveId]) {
+          subjectFacultyRecords.push({
+            application_id: appData.id,
+            subject_id: electiveId,
+            faculty_id: subjectFacultyMap[electiveId],
+            faculty_verified: false
+          });
+        }
+      }
+
+      // Insert all subject-faculty mappings
+      const { error: mappingError } = await supabase
+        .from('application_subject_faculty')
+        .insert(subjectFacultyRecords);
+
+      if (mappingError) throw mappingError;
+
       // Create notification for student
       await supabase.rpc('create_notification', {
         p_user_id: user?.id,

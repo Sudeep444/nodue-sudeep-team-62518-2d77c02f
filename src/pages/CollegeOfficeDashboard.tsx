@@ -139,13 +139,43 @@ export default function CollegeOfficeDashboard() {
 
       if (error) throw error;
 
+      // If approved, notify all selected faculty members
+      if (approved) {
+        // Fetch all faculty assignments for this application
+        const { data: facultyAssignments, error: fetchError } = await supabase
+          .from('application_subject_faculty')
+          .select('faculty_id, subjects(name, code)')
+          .eq('application_id', applicationId);
+
+        if (fetchError) throw fetchError;
+
+        // Get unique faculty IDs
+        const uniqueFacultyIds = [...new Set(facultyAssignments?.map(a => a.faculty_id) || [])];
+
+        // Create notifications for each selected faculty
+        if (uniqueFacultyIds.length > 0) {
+          const facultyNotifications = uniqueFacultyIds.map(facultyId => ({
+            user_id: facultyId,
+            title: 'New Application for Faculty Verification',
+            message: `${selectedApp.profiles?.name} (${selectedApp.profiles?.usn}) - You have been selected to verify subjects for this student's No-Due application.`,
+            type: 'info' as const,
+            related_entity_type: 'application',
+            related_entity_id: applicationId
+          }));
+
+          await supabase
+            .from('notifications')
+            .insert(facultyNotifications);
+        }
+      }
+
       await (supabase as any)
         .from('notifications')
         .insert({
           user_id: selectedApp.student_id,
           title: approved ? 'Office Verification Approved' : 'Office Verification Rejected',
           message: approved 
-            ? `Your office clearance has been approved. ${comment || ''}` 
+            ? `Your office clearance has been approved. ${comment || 'Selected faculty members will now verify your subjects.'}` 
             : `Office verification rejected. Reason: ${comment || 'Not specified'}. Please visit the college office to resolve.`,
           type: approved ? 'approval' : 'rejection',
           related_entity_type: 'application',
