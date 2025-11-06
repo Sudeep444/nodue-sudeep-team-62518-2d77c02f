@@ -297,6 +297,76 @@ const SubmitNoDueForm = () => {
           .insert(libraryNotifications);
       }
 
+      // Notify all assigned faculty members
+      const uniqueFacultyIds = [...new Set(subjectFacultyRecords.map(r => r.faculty_id))];
+      
+      if (uniqueFacultyIds.length > 0) {
+        const facultyNotifications = uniqueFacultyIds.map(facultyId => ({
+          user_id: facultyId,
+          title: 'New No-Due Application',
+          message: `${profile.name} (${profile.usn}) from ${department} - Semester ${semester} has submitted a No-Due application requiring your verification.`,
+          type: 'info' as const,
+          related_entity_type: 'application',
+          related_entity_id: appData.id
+        }));
+
+        await supabase
+          .from('notifications')
+          .insert(facultyNotifications);
+      }
+
+      // Notify HOD of the department
+      const { data: hodStaff } = await supabase
+        .from('staff_profiles')
+        .select('id')
+        .eq('department', department)
+        .eq('designation', 'HOD')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (hodStaff && hodStaff.length > 0) {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: hodStaff[0].id,
+            title: 'New No-Due Application',
+            message: `${profile.name} (${profile.usn}) from ${department} - Semester ${semester} has submitted a No-Due application for your approval.`,
+            type: 'info',
+            related_entity_type: 'application',
+            related_entity_id: appData.id
+          });
+      }
+
+      // Notify lab instructor of the department
+      const { data: labInstructor } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'lab_instructor');
+
+      if (labInstructor && labInstructor.length > 0) {
+        const { data: labStaff } = await supabase
+          .from('staff_profiles')
+          .select('id')
+          .eq('department', department)
+          .eq('is_active', true)
+          .in('id', labInstructor.map(l => l.user_id));
+
+        if (labStaff && labStaff.length > 0) {
+          const labNotifications = labStaff.map(staff => ({
+            user_id: staff.id,
+            title: 'New No-Due Application',
+            message: `${profile.name} (${profile.usn}) from ${department} - Semester ${semester} has submitted a No-Due application for lab clearance.`,
+            type: 'info' as const,
+            related_entity_type: 'application',
+            related_entity_id: appData.id
+          }));
+
+          await supabase
+            .from('notifications')
+            .insert(labNotifications);
+        }
+      }
+
       toast.success('Application submitted successfully!');
       navigate('/dashboard/student');
     } catch (error: any) {
