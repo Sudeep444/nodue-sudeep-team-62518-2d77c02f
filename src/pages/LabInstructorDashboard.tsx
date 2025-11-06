@@ -23,9 +23,16 @@ export default function LabInstructorDashboard() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    fetchApplications();
-    fetchStaffProfile();
-  }, []);
+    if (user?.id) {
+      fetchStaffProfile();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (staffProfile) {
+      fetchApplications();
+    }
+  }, [staffProfile]);
 
   const fetchStaffProfile = async () => {
     if (!user?.id) return;
@@ -42,23 +49,36 @@ export default function LabInstructorDashboard() {
   };
 
   const fetchApplications = async () => {
-    const { data, error } = await (supabase as any)
-      .from('applications')
-      .select(`
-        *,
-        profiles:student_id (name, usn, email, department, photo, student_type)
-      `)
-      .eq('payment_verified', true)
-      .order('created_at', { ascending: false});
+    if (!staffProfile?.department) {
+      setLoading(false);
+      return;
+    }
 
-    if (error) {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('applications')
+        .select(`
+          *,
+          profiles:student_id (name, usn, email, department, semester, photo, student_type)
+        `)
+        .eq('hod_verified', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Filter by lab instructor's department
+      const departmentFiltered = (data || []).filter(
+        (app: any) => app.profiles?.department === staffProfile.department
+      );
+
+      setApplications(departmentFiltered);
+      setFilteredApplications(departmentFiltered);
+    } catch (error: any) {
       console.error('Error fetching applications:', error);
       toast.error("Failed to load applications");
-    } else {
-      setApplications(data || []);
-      setFilteredApplications(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const applyFilters = () => {
@@ -69,7 +89,7 @@ export default function LabInstructorDashboard() {
     }
 
     if (selectedSemester !== "All") {
-      filtered = filtered.filter((app) => app.semester === parseInt(selectedSemester));
+      filtered = filtered.filter((app) => app.profiles?.semester === parseInt(selectedSemester));
     }
 
     setFilteredApplications(filtered);
@@ -79,11 +99,13 @@ export default function LabInstructorDashboard() {
   const handleVerification = async (applicationId: string, approved: boolean, comment: string) => {
     setProcessing(true);
     try {
+      // Update application status
       const { error } = await (supabase as any)
         .from('applications')
         .update({
           lab_verified: approved,
           lab_comment: comment || null,
+          payment_verified: approved, // Mark payment as verified
           status: approved ? 'completed' : 'rejected',
           updated_at: new Date().toISOString()
         })
@@ -133,9 +155,11 @@ export default function LabInstructorDashboard() {
 
   const stats = {
     total: filteredApplications.length,
-    pending: filteredApplications.filter(a => !a.lab_verified && a.status !== 'rejected' && a.status !== 'completed').length,
+    pending: filteredApplications.filter(a => 
+      !a.lab_verified && !a.payment_verified && a.status !== 'rejected' && a.status !== 'completed'
+    ).length,
     completed: filteredApplications.filter(a => a.lab_verified && a.status === 'completed').length,
-    rejected: filteredApplications.filter(a => a.status === 'rejected' && !a.lab_verified).length
+    rejected: filteredApplications.filter(a => a.status === 'rejected').length
   };
 
   return (

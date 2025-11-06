@@ -94,12 +94,20 @@ export const PaymentDetailModal = ({
             <h3 className="font-semibold mb-3">Payment Details</h3>
             <div className="p-4 bg-muted rounded-lg space-y-2 text-sm">
               <div className="flex justify-between">
+                <span className="font-medium">Submitted Name:</span>
+                <span>{application.payment_comment?.replace('Payment submitted by ', '') || application.profiles?.name}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="font-medium">Transaction ID:</span>
-                <span className="font-mono">{application.transaction_id || "Not submitted"}</span>
+                <span className="font-mono font-semibold">{application.transaction_id || "Not submitted"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Payment Amount:</span>
+                <span className="font-semibold">₹ 500</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Submission Date:</span>
-                <span>{new Date(application.created_at).toLocaleString()}</span>
+                <span>{application.updated_at ? new Date(application.updated_at).toLocaleString() : 'N/A'}</span>
               </div>
             </div>
           </div>
