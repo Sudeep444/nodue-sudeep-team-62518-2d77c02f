@@ -62,16 +62,50 @@ export default function HODDashboard() {
         const { data: facultyAssignments, error } = await supabase
           .from('application_subject_faculty')
           .select(`
-            *,
-            applications:application_id(*,profiles:student_id(*)),
-            subjects:subject_id(*)
+            id,
+            faculty_verified,
+            faculty_comment,
+            verified_at,
+            created_at,
+            application_id,
+            subject_id,
+            faculty_id
           `)
           .eq('faculty_id', user?.id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Teaching mode fetch error:', error);
+          throw error;
+        }
 
-        const filteredTeaching = (facultyAssignments || []).filter(assignment => {
+        // Fetch related data for each assignment
+        const enrichedAssignments = await Promise.all(
+          (facultyAssignments || []).map(async (assignment) => {
+            // Fetch application with student profile
+            const { data: application } = await supabase
+              .from('applications')
+              .select('*, profiles:student_id(*)')
+              .eq('id', assignment.application_id)
+              .single();
+
+            // Fetch subject
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('*')
+              .eq('id', assignment.subject_id)
+              .single();
+
+            return {
+              ...assignment,
+              applications: application,
+              subjects: subject
+            };
+          })
+        );
+
+        // Filter by college office verification and semester
+        const filteredTeaching = enrichedAssignments.filter(assignment => {
           const app = assignment.applications;
           return app?.college_office_verified === true && 
                  (selectedSemester === 'all' || app?.semester?.toString() === selectedSemester);
