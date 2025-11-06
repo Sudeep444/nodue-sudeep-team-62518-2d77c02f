@@ -213,9 +213,13 @@ export default function LibraryDashboard() {
               related_entity_id: applicationId
             }));
 
-            await supabase
+            const { error: notificationError } = await supabase
               .from('notifications')
               .insert(hostelNotifications);
+
+            if (notificationError) {
+              console.error('Failed to notify hostel staff:', notificationError);
+            }
           }
         } else {
           // Notify College Office staff for local students
@@ -234,9 +238,13 @@ export default function LibraryDashboard() {
               related_entity_id: applicationId
             }));
 
-            await supabase
+            const { error: notificationError } = await supabase
               .from('notifications')
               .insert(collegeOfficeNotifications);
+
+            if (notificationError) {
+              console.error('Failed to notify college office staff:', notificationError);
+            }
           }
         }
       }

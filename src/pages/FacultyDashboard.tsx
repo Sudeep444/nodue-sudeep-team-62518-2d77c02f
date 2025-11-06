@@ -227,7 +227,7 @@ export default function FacultyDashboard() {
             .single();
 
           if (hodStaff) {
-            await supabase
+            const { error: notificationError } = await supabase
               .from('notifications')
               .insert({
                 user_id: hodStaff.id,
@@ -237,6 +237,10 @@ export default function FacultyDashboard() {
                 related_entity_type: 'application',
                 related_entity_id: applicationId
               });
+
+            if (notificationError) {
+              console.error('Failed to notify HOD:', notificationError);
+            }
           }
         }
       } else {

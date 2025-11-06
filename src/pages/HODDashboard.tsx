@@ -117,9 +117,13 @@ export default function HODDashboard() {
               related_entity_id: applicationId
             }));
 
-            await supabase
+            const { error: notificationError } = await supabase
               .from('notifications')
               .insert(labNotifications);
+
+            if (notificationError) {
+              console.error('Failed to notify lab instructors:', notificationError);
+            }
           }
         }
       }

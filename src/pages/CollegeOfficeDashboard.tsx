@@ -163,9 +163,13 @@ export default function CollegeOfficeDashboard() {
             related_entity_id: applicationId
           }));
 
-          await supabase
+          const { error: notificationError } = await supabase
             .from('notifications')
             .insert(facultyNotifications);
+
+          if (notificationError) {
+            console.error('Failed to notify faculty:', notificationError);
+          }
         }
       }
 

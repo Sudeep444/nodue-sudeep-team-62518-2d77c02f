@@ -132,9 +132,13 @@ export default function HostelDashboard() {
             related_entity_id: applicationId
           }));
 
-          await supabase
+          const { error: notificationError } = await supabase
             .from('notifications')
             .insert(collegeOfficeNotifications);
+
+          if (notificationError) {
+            console.error('Failed to notify college office staff:', notificationError);
+          }
         }
       }
 
