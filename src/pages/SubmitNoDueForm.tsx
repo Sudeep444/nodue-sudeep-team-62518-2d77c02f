@@ -278,9 +278,7 @@ const SubmitNoDueForm = () => {
 
       // Notify all library staff
       const { data: libraryStaff, error: libraryStaffError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'library');
+        .rpc('get_users_by_role', { role_name: 'library' });
 
       if (libraryStaffError) {
         console.error('Failed to fetch library staff:', libraryStaffError);
