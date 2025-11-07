@@ -19,9 +19,6 @@ const AdminSignup = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // This should be stored securely - for demo purposes only
-  const ADMIN_CODE = "NODEX2024ADMIN";
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -35,55 +32,26 @@ const AdminSignup = () => {
       return;
     }
 
-    if (formData.adminCode !== ADMIN_CODE) {
-      toast.error("Invalid admin code");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // Sign up the user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (signUpError) {
-        toast.error(signUpError.message);
-        return;
-      }
-
-      if (!authData.user) {
-        toast.error("Failed to create user");
-        return;
-      }
-
-      // Create profile
-      const { error: profileError } = await (supabase as any)
-        .from('profiles')
-        .insert([{
-          id: authData.user.id,
+      // Call secure server-side endpoint to validate admin code and create account
+      const { data, error } = await supabase.functions.invoke('register-admin', {
+        body: {
           name: formData.name,
           email: formData.email,
-          profile_completed: true
-        }]);
+          password: formData.password,
+          adminCode: formData.adminCode
+        }
+      });
 
-      if (profileError) {
-        toast.error("Failed to create profile");
+      if (error) {
+        toast.error(error.message || 'Failed to create admin account');
         return;
       }
 
-      // Assign admin role
-      const { error: roleError } = await (supabase as any)
-        .from('user_roles')
-        .insert([{
-          user_id: authData.user.id,
-          role: 'admin'
-        }]);
-
-      if (roleError) {
-        toast.error("Failed to assign admin role");
+      if (data?.error) {
+        toast.error(data.error);
         return;
       }
 
@@ -91,6 +59,7 @@ const AdminSignup = () => {
       navigate('/login/admin');
       
     } catch (error) {
+      console.error('Admin signup error:', error);
       toast.error('An error occurred during signup');
     } finally {
       setIsLoading(false);
