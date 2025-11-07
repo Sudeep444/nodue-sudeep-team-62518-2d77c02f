@@ -171,7 +171,7 @@ const AddStaff = () => {
 
       toast({
         title: "Success!",
-        description: `Staff account created. A secure password has been generated and the staff member will be prompted to change it on first login.`,
+        description: `Staff account created. Email: ${formData.email} | Password: ${formData.empId}`,
       });
 
       // Refresh staff list and reset form
@@ -216,7 +216,7 @@ const AddStaff = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Add New Staff</h1>
-            <p className="text-muted-foreground">Create secure staff accounts with auto-generated passwords</p>
+            <p className="text-muted-foreground">Create staff accounts with generated login credentials</p>
           </div>
         </div>
 
@@ -287,7 +287,7 @@ const AddStaff = () => {
                   Staff Information
                 </CardTitle>
                 <CardDescription>
-                  Enter staff details to create a secure account
+                  Enter staff details and generate login credentials
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -323,7 +323,7 @@ const AddStaff = () => {
                       placeholder="Enter employee ID"
                       required
                     />
-                    <p className="text-xs text-muted-foreground">Used for identification purposes</p>
+                    <p className="text-xs text-muted-foreground">This will be used as the login password</p>
                   </div>
 
                   <div className="space-y-2">

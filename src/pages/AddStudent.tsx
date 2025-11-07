@@ -364,10 +364,10 @@ const AddStudent = () => {
           <CardContent className="p-6">
             <h3 className="font-semibold mb-2">📋 Login Credentials Information</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Login ID = Student's email (USN@temp.edu)</li>
-              <li>• A secure temporary password is generated automatically</li>
-              <li>• Students must change their password on first login</li>
-              <li>• Students must complete their profile after first login</li>
+              <li>• Login ID = USN (e.g., 21CS001)</li>
+              <li>• Password = USN (same as Login ID)</li>
+              <li>• Students must complete their profile on first login</li>
+              <li>• Students can only access the system after being added by admin</li>
             </ul>
           </CardContent>
         </Card>
