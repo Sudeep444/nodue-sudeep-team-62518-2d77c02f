@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
 import { getNotificationIcon, getNotificationColor, formatNotificationTime } from "@/lib/notifications";
 import { CheckCheck } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NotificationsPanelProps {
   onClose?: () => void;
@@ -13,8 +14,33 @@ interface NotificationsPanelProps {
 
 const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
+  const { user } = useAuth();
   
   const recentNotifications = notifications.slice(0, 10);
+
+  // Determine notifications route based on user role
+  const getNotificationsRoute = () => {
+    if (!user?.role) return '/admin/notifications';
+    
+    switch (user.role.toLowerCase()) {
+      case 'student':
+        return '/student/notifications';
+      case 'library':
+        return '/library/notifications';
+      case 'hostel':
+        return '/hostel/notifications';
+      case 'lab_instructor':
+        return '/lab-instructor/notifications';
+      case 'college_office':
+        return '/college-office/notifications';
+      case 'faculty':
+        return '/faculty/notifications';
+      case 'hod':
+        return '/hod/notifications';
+      default:
+        return '/admin/notifications';
+    }
+  };
 
   const handleNotificationClick = (id: string, read: boolean) => {
     if (!read) {
@@ -99,7 +125,7 @@ const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
               asChild
               onClick={onClose}
             >
-              <Link to="/admin/notifications">
+              <Link to={getNotificationsRoute()}>
                 View all notifications
               </Link>
             </Button>

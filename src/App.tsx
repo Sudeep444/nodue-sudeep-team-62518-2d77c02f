@@ -307,7 +307,55 @@ const App = () => (
               } 
             />
             <Route 
-              path="/college-office/profile" 
+              path="/library/notifications" 
+              element={
+                <ProtectedRoute requiredRole="library">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/hostel/notifications" 
+              element={
+                <ProtectedRoute requiredRole="hostel">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/lab-instructor/notifications" 
+              element={
+                <ProtectedRoute requiredRole="lab_instructor">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/college-office/notifications" 
+              element={
+                <ProtectedRoute requiredRole="college_office">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/faculty/notifications" 
+              element={
+                <ProtectedRoute requiredRole="faculty">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/hod/notifications" 
+              element={
+                <ProtectedRoute requiredRole="hod">
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/college-office/profile"
               element={
                 <ProtectedRoute requiredRole="college_office">
                   <CollegeOfficeProfile />
