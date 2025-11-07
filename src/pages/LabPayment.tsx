@@ -110,61 +110,7 @@ const LabPayment = () => {
         p_related_entity_id: application.id
       });
 
-      // Notify lab instructors of the department
-      const { data: labInstructors, error: labInstructorError } = await supabase
-        .from('staff_profiles')
-        .select('id')
-        .eq('department', profile.department)
-        .eq('is_active', true);
-
-      console.log('Lab instructors found:', labInstructors);
-      if (labInstructorError) {
-        console.error('Error fetching lab instructors:', labInstructorError);
-      }
-
-      if (labInstructors && labInstructors.length > 0) {
-        // Check which staff members have lab_instructor role
-        const { data: labInstructorRoles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'lab_instructor')
-          .in('user_id', labInstructors.map(s => s.id));
-
-        console.log('Lab instructor roles found:', labInstructorRoles);
-        if (rolesError) {
-          console.error('Error fetching lab instructor roles:', rolesError);
-        }
-
-        if (labInstructorRoles && labInstructorRoles.length > 0) {
-          // Create notifications for all lab instructors
-          const notifications = labInstructorRoles.map(instructor => ({
-            user_id: instructor.user_id,
-            title: 'New Payment Verification Request',
-            message: `${profile.name} (${profile.usn}) from ${profile.department} has submitted payment details for verification.`,
-            type: 'info',
-            related_entity_type: 'application',
-            related_entity_id: application.id
-          }));
-
-          console.log('Sending notifications to lab instructors:', notifications);
-
-          const { error: notificationError } = await supabase
-            .from('notifications')
-            .insert(notifications);
-
-          if (notificationError) {
-            console.error('Error creating lab instructor notifications:', notificationError);
-            // Don't fail the payment submission, just log the error
-            toast.error('Payment submitted but failed to notify lab instructors. Please contact admin.');
-          } else {
-            console.log('Lab instructor notifications created successfully');
-          }
-        } else {
-          console.warn('No lab instructors with proper roles found for department:', profile.department);
-        }
-      } else {
-        console.warn('No lab instructor staff profiles found for department:', profile.department);
-      }
+      // Lab instructor notifications are now handled automatically by database trigger
 
       // Create audit log
       await supabase.rpc('create_audit_log', {
