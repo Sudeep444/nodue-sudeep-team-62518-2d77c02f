@@ -73,10 +73,13 @@ Deno.serve(async (req) => {
 
     const input: StaffInput = parsed.data
 
-    // Create auth user with employee ID as password
+    // Generate secure random password
+    const securePassword = crypto.randomUUID() + Math.random().toString(36).substring(2, 15)
+
+    // Create auth user with secure password
     const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
       email: input.email,
-      password: input.employee_id,
+      password: securePassword,
       email_confirm: true,
       user_metadata: { name: input.name, employee_id: input.employee_id }
     })
@@ -102,6 +105,7 @@ Deno.serve(async (req) => {
       designation: input.designation ?? null,
       department: input.department ?? null,
       is_active: true,
+      password_change_required: true
     })
     if (profileErr) {
       return new Response(JSON.stringify({ error: profileErr.message }), {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, UserPlus, Copy, Eye, EyeOff, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +27,7 @@ const AddFaculty = () => {
     email: '',
     empId: ''
   });
-  const [generatedCredentials, setGeneratedCredentials] = useState<{loginId: string, password: string} | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{loginId: string} | null>(null);
   const [faculty, setFaculty] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +76,6 @@ const AddFaculty = () => {
           department: staff.department,
           designation: staff.designation,
           loginId: staff.email,
-          password: staff.employee_id,
           status: staff.is_active ? 'active' : 'inactive'
         }));
 
@@ -98,8 +96,7 @@ const AddFaculty = () => {
   useEffect(() => {
     if (formData.empId) {
       const loginId = `${formData.empId}@nodex.edu`;
-      const password = formData.empId;
-      setGeneratedCredentials({ loginId, password });
+      setGeneratedCredentials({ loginId });
     } else {
       setGeneratedCredentials(null);
     }
@@ -179,7 +176,7 @@ const AddFaculty = () => {
 
       toast({
         title: "Success!",
-        description: `Faculty account created successfully. Login credentials:\nID: ${generatedCredentials.loginId}\nPassword: ${generatedCredentials.password}`,
+        description: `Faculty account created successfully. A secure password has been generated and the faculty member will be prompted to change it on first login.`,
       });
 
       // Refresh faculty list
@@ -188,7 +185,6 @@ const AddFaculty = () => {
       // Reset form
       setFormData({ name: '', email: '', empId: '' });
       setGeneratedCredentials(null);
-      setShowPassword(false);
       
     } catch (error: any) {
       console.error('Error creating faculty:', error);
@@ -216,7 +212,7 @@ const AddFaculty = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Add New Faculty</h1>
-            <p className="text-muted-foreground">Create faculty accounts with generated login credentials</p>
+            <p className="text-muted-foreground">Create secure faculty accounts with auto-generated passwords</p>
           </div>
         </div>
 
@@ -347,7 +343,7 @@ const AddFaculty = () => {
                     <div className="pt-4">
                       <Card className="bg-muted/50 border-primary/20">
                         <CardContent className="p-4 space-y-3">
-                          <h4 className="font-semibold text-foreground">Auto-Generated Credentials</h4>
+                          <h4 className="font-semibold text-foreground">Login Information</h4>
                           
                           <div className="space-y-2">
                             <Label>Login ID</Label>
@@ -360,21 +356,9 @@ const AddFaculty = () => {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Password</Label>
-                            <div className="flex gap-2">
-                              <Input 
-                                type={showPassword ? 'text' : 'password'} 
-                                value={generatedCredentials.password} 
-                                readOnly 
-                                className="font-mono text-sm"
-                              />
-                              <Button type="button" size="sm" variant="outline" onClick={() => setShowPassword(!showPassword)}>
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
-                              <Button type="button" size="sm" variant="outline" onClick={() => copyToClipboard(generatedCredentials.password, 'Password')}>
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              A secure temporary password will be generated. The faculty member will be required to change it on first login.
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
@@ -428,8 +412,7 @@ const AddFaculty = () => {
                       <TableHead>Employee ID</TableHead>
                       <TableHead>Department</TableHead>
                       <TableHead>Designation</TableHead>
-                      <TableHead>Login ID</TableHead>
-                      <TableHead>Password</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -447,32 +430,7 @@ const AddFaculty = () => {
                         <TableCell>{fac.empId}</TableCell>
                         <TableCell>{fac.department}</TableCell>
                         <TableCell>{fac.designation}</TableCell>
-                        <TableCell className="font-mono text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>{fac.loginId}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyToClipboard(fac.loginId, 'Login ID')}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>••••••••</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyToClipboard(fac.password, 'Password')}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        <TableCell className="font-mono text-sm">{fac.loginId}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">Active</Badge>
                         </TableCell>
@@ -485,7 +443,7 @@ const AddFaculty = () => {
                       return departmentMatch && designationMatch;
                     }).length === 0 && selectedDepartment && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No faculty found for the selected filters
                         </TableCell>
                       </TableRow>

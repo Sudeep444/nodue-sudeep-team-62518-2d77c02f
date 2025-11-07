@@ -132,10 +132,13 @@ Deno.serve(async (req) => {
           continue
         }
 
+        // Generate secure random password
+        const securePassword = crypto.randomUUID() + Math.random().toString(36).substring(2, 15)
+
         // Create auth user
         const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
           email: `${student.usn}@temp.edu`,
-          password: student.usn,
+          password: securePassword,
           email_confirm: true,
           user_metadata: {
             name: student.name,
@@ -157,7 +160,8 @@ Deno.serve(async (req) => {
               department: student.department,
               batch: student.batch,
               semester: 1,
-              profile_completed: false
+              profile_completed: false,
+              password_change_required: true
             })
 
           if (profileError) throw profileError
