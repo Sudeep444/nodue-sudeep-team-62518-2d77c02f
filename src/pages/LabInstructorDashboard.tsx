@@ -9,6 +9,7 @@ import { ProfileSummaryCard } from "@/components/lab/ProfileSummaryCard";
 import { FilterSection } from "@/components/lab/FilterSection";
 import { PaymentRequestTabs } from "@/components/lab/PaymentRequestTabs";
 import { PaymentDetailModal } from "@/components/lab/PaymentDetailModal";
+import NotificationsPanel from "@/components/NotificationsPanel";
 
 export default function LabInstructorDashboard() {
   const { user } = useAuth();
@@ -188,63 +189,74 @@ export default function LabInstructorDashboard() {
           onApplyFilter={applyFilters}
         />
 
-        {/* Statistics */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-              <FlaskConical className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Statistics */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+                  <FlaskConical className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pending}</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                  <Clock className="h-4 w-4 text-warning" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.pending}</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.completed}</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.completed}</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-              <XCircle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.rejected}</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+                  <XCircle className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.rejected}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Payment Request Tabs */}
+            {loading ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-muted-foreground">Loading applications...</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <PaymentRequestTabs
+                applications={filteredApplications}
+                onViewDetails={handleViewDetails}
+                onApproveRejected={handleApproveRejected}
+              />
+            )}
+          </div>
+
+          {/* Notifications Panel */}
+          <div className="lg:col-span-1">
+            <Card>
+              <NotificationsPanel />
+            </Card>
+          </div>
         </div>
-
-        {/* Payment Request Tabs */}
-        {loading ? (
-          <Card>
-            <CardContent className="py-8">
-              <p className="text-center text-muted-foreground">Loading applications...</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <PaymentRequestTabs
-            applications={filteredApplications}
-            onViewDetails={handleViewDetails}
-            onApproveRejected={handleApproveRejected}
-          />
-        )}
 
         {/* Detail Modal */}
         <PaymentDetailModal
