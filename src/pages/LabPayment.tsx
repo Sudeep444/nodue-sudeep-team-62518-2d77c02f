@@ -110,6 +110,38 @@ const LabPayment = () => {
         p_related_entity_id: application.id
       });
 
+      // Notify lab instructors of the department
+      const { data: labInstructors } = await supabase
+        .from('staff_profiles')
+        .select('id')
+        .eq('department', profile.department)
+        .eq('is_active', true);
+
+      if (labInstructors && labInstructors.length > 0) {
+        // Check which staff members have lab_instructor role
+        const { data: labInstructorRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'lab_instructor')
+          .in('user_id', labInstructors.map(s => s.id));
+
+        if (labInstructorRoles && labInstructorRoles.length > 0) {
+          // Create notifications for all lab instructors
+          const notifications = labInstructorRoles.map(instructor => ({
+            user_id: instructor.user_id,
+            title: 'New Payment Verification Request',
+            message: `${profile.name} (${profile.usn}) from ${profile.department} has submitted payment details for verification.`,
+            type: 'info',
+            related_entity_type: 'application',
+            related_entity_id: application.id
+          }));
+
+          await supabase.rpc('create_bulk_notifications', {
+            notifications
+          });
+        }
+      }
+
       // Create audit log
       await supabase.rpc('create_audit_log', {
         p_action: 'payment_submitted',
