@@ -148,9 +148,9 @@ const LabPayment = () => {
 
           console.log('Sending notifications to lab instructors:', notifications);
 
-          const { error: notificationError } = await supabase.rpc('create_bulk_notifications', {
-            notifications
-          });
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert(notifications);
 
           if (notificationError) {
             console.error('Error creating lab instructor notifications:', notificationError);
