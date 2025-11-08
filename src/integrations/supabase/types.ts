@@ -24,6 +24,9 @@ export type Database = {
           id: string
           subject_id: string
           updated_at: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           verified_at: string | null
         }
         Insert: {
@@ -35,6 +38,9 @@ export type Database = {
           id?: string
           subject_id: string
           updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           verified_at?: string | null
         }
         Update: {
@@ -46,6 +52,9 @@ export type Database = {
           id?: string
           subject_id?: string
           updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           verified_at?: string | null
         }
         Relationships: [
@@ -568,6 +577,7 @@ export type Database = {
       department: "MECH" | "CSE" | "CIVIL" | "EC" | "AIML" | "CD"
       section: "A" | "B"
       student_type: "local" | "hostel"
+      verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -708,6 +718,7 @@ export const Constants = {
       department: ["MECH", "CSE", "CIVIL", "EC", "AIML", "CD"],
       section: ["A", "B"],
       student_type: ["local", "hostel"],
+      verification_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

@@ -15,8 +15,7 @@ import {
   Edit,
   CreditCard,
   Bell,
-  ChevronDown,
-  ChevronUp
+  XCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +44,7 @@ interface StudentProfile {
 interface FacultyAssignment {
   id: string;
   faculty_verified: boolean;
+  verification_status: 'pending' | 'approved' | 'rejected';
   faculty_comment?: string;
   verified_at?: string;
   subjects: {
@@ -94,7 +94,6 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [submissionsAllowed, setSubmissionsAllowed] = useState(true);
   const [submissionMessage, setSubmissionMessage] = useState<string>('');
-  const [expandedFaculty, setExpandedFaculty] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -162,6 +161,7 @@ const StudentDashboard = () => {
             .select(`
               id,
               faculty_verified,
+              verification_status,
               faculty_comment,
               verified_at,
               subjects:subject_id(name, code),
@@ -289,14 +289,44 @@ const StudentDashboard = () => {
     }
   };
 
+  const getFacultyStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
+    const statusConfig = {
+      approved: {
+        label: 'Approved',
+        className: 'bg-success/10 text-success border-success/20',
+        icon: <CheckCircle2 className="h-3 w-3 mr-1" />
+      },
+      pending: {
+        label: 'Pending',
+        className: 'bg-warning/10 text-warning border-warning/20',
+        icon: <Clock className="h-3 w-3 mr-1" />
+      },
+      rejected: {
+        label: 'Rejected',
+        className: 'bg-destructive/10 text-destructive border-destructive/20',
+        icon: <XCircle className="h-3 w-3 mr-1" />
+      }
+    };
+    
+    const config = statusConfig[status];
+    return (
+      <Badge className={config.className} variant="outline">
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
+  };
+
   const calculateProgress = (app: Application) => {
-    const allFacultyVerified = app.faculty_assignments?.every(a => a.faculty_verified) ?? false;
+    const allFacultyApproved = app.faculty_assignments?.every(
+      a => a.verification_status === 'approved'
+    ) ?? false;
     
     const steps = [
       app.library_verified,
       profile?.student_type === 'hostel' ? app.hostel_verified : true,
       app.college_office_verified,
-      allFacultyVerified,
+      allFacultyApproved,
       app.hod_verified,
       app.payment_verified,
       app.lab_verified
@@ -559,105 +589,108 @@ const StudentDashboard = () => {
                 {verificationSteps.map((step, index) => {
                   if (!step.required) return null;
                   
-                  // Special handling for Faculty verification
+                  // Special handling for Faculty verification - Always visible
                   if (step.name === "Faculty" && currentApplication.faculty_assignments?.length > 0) {
-                    const allFacultyVerified = currentApplication.faculty_assignments.every(a => a.faculty_verified);
-                    const verifiedCount = currentApplication.faculty_assignments.filter(a => a.faculty_verified).length;
+                    const allFacultyApproved = currentApplication.faculty_assignments.every(
+                      a => a.verification_status === 'approved'
+                    );
+                    const approvedCount = currentApplication.faculty_assignments.filter(
+                      a => a.verification_status === 'approved'
+                    ).length;
+                    const pendingCount = currentApplication.faculty_assignments.filter(
+                      a => a.verification_status === 'pending'
+                    ).length;
+                    const rejectedCount = currentApplication.faculty_assignments.filter(
+                      a => a.verification_status === 'rejected'
+                    ).length;
                     const totalCount = currentApplication.faculty_assignments.length;
                     
                     return (
-                      <div key={step.name}>
-                        <div 
-                          className="flex items-start gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
-                          onClick={() => setExpandedFaculty(!expandedFaculty)}
-                        >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            allFacultyVerified
-                              ? 'bg-success/20 text-success' 
-                              : 'bg-muted text-muted-foreground'
-                          }`}>
-                            {allFacultyVerified ? (
-                              <CheckCircle2 className="h-6 w-6" />
-                            ) : (
-                              <Clock className="h-6 w-6" />
-                            )}
+                      <div key={step.name} className="border rounded-lg p-4 bg-card">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold">Faculty Approval Status</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {approvedCount} of {totalCount} Approved
+                            </span>
                           </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-base">Faculty Verification</p>
-                            <p className="text-sm mt-1">
-                              {verifiedCount} of {totalCount} faculty verified
-                            </p>
-                          </div>
-                          {expandedFaculty ? (
-                            <ChevronUp className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                          )}
                         </div>
                         
-                        {/* Detailed Faculty Assignments */}
-                        {expandedFaculty && (
-                          <div className="space-y-3 mt-3 pl-4">
-                            {currentApplication.faculty_assignments.length > 0 ? (
-                              currentApplication.faculty_assignments.map((assignment) => {
-                                // Additional safety check
-                                if (!assignment.subjects || !assignment.staff_profiles) {
-                                  return null;
-                                }
-                                
-                                return (
-                                  <div key={assignment.id} className="border rounded-lg p-4 bg-card">
-                                    <div className="flex items-start justify-between">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <p className="font-semibold">
-                                            {assignment.subjects.name} ({assignment.subjects.code})
-                                          </p>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">
-                                          Faculty: {assignment.staff_profiles.name}
-                                          <span className="ml-2 text-xs">
-                                            ({assignment.staff_profiles.designation}, {assignment.staff_profiles.department})
-                                          </span>
-                                        </p>
-                                      </div>
-                                      <div className="flex flex-col items-end gap-1">
-                                        {assignment.faculty_verified ? (
-                                          <>
-                                            <Badge className="bg-success/10 text-success border-success/20">
-                                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                                              Verified
-                                            </Badge>
-                                            {assignment.verified_at && (
-                                              <p className="text-xs text-muted-foreground">
-                                                {new Date(assignment.verified_at).toLocaleDateString()}
-                                              </p>
-                                            )}
-                                          </>
-                                        ) : (
-                                          <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            Pending
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {assignment.faculty_comment && (
-                                      <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
-                                        <p className="text-xs text-muted-foreground mb-1">Faculty Comment:</p>
-                                        <p>{assignment.faculty_comment}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="text-center py-4 text-muted-foreground text-sm">
-                                No faculty assignments found
-                              </div>
-                            )}
+                        {/* Visual Summary */}
+                        <div className="flex gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-success"></div>
+                            <span className="text-sm">Approved: {approvedCount}</span>
                           </div>
-                        )}
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-warning"></div>
+                            <span className="text-sm">Pending: {pendingCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-destructive"></div>
+                            <span className="text-sm">Rejected: {rejectedCount}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Faculty Approval Table */}
+                        <div className="space-y-3">
+                          {currentApplication.faculty_assignments.map((assignment) => {
+                            if (!assignment.subjects || !assignment.staff_profiles) return null;
+                            
+                            return (
+                              <div 
+                                key={assignment.id} 
+                                className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                              >
+                                {/* Subject Name - 4 columns */}
+                                <div className="md:col-span-4">
+                                  <p className="text-xs text-muted-foreground mb-1">Subject</p>
+                                  <p className="font-semibold">
+                                    {assignment.subjects.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {assignment.subjects.code}
+                                  </p>
+                                </div>
+                                
+                                {/* Faculty Name - 4 columns */}
+                                <div className="md:col-span-4">
+                                  <p className="text-xs text-muted-foreground mb-1">Faculty</p>
+                                  <p className="font-medium">
+                                    {assignment.staff_profiles.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {assignment.staff_profiles.designation}
+                                  </p>
+                                </div>
+                                
+                                {/* Status - 4 columns */}
+                                <div className="md:col-span-4 flex flex-col items-start md:items-end justify-center gap-2">
+                                  {getFacultyStatusBadge(assignment.verification_status || 'pending')}
+                                  {assignment.verified_at && assignment.verification_status === 'approved' && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(assignment.verified_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                {/* Comment - Full width if exists */}
+                                {assignment.faculty_comment && (
+                                  <div className="md:col-span-12 mt-2 p-3 bg-muted/50 rounded-md border-l-4 border-primary">
+                                    <p className="text-xs font-semibold text-muted-foreground mb-1">
+                                      Faculty Comment:
+                                    </p>
+                                    <p className="text-sm">{assignment.faculty_comment}</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   }
