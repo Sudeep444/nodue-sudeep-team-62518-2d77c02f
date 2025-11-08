@@ -59,6 +59,51 @@ serve(async (req) => {
       );
     }
 
+    // Get user profile to check batch and completion status
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('batch, profile_completed')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError);
+      return new Response(
+        JSON.stringify({ error: 'Profile not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if profile is completed
+    if (!profile.profile_completed) {
+      return new Response(
+        JSON.stringify({ error: 'Profile must be completed before submitting application' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if submissions are allowed for this batch
+    const { data: submissionAllowed, error: checkError } = await supabaseAdmin
+      .rpc('check_submission_allowed', { p_batch_name: profile.batch });
+
+    if (checkError) {
+      console.error('Error checking submission status:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Unable to verify submission eligibility' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!submissionAllowed) {
+      console.log('Submission blocked for batch:', profile.batch);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Submissions are currently not allowed for your batch. Please check with administration or try again during the scheduled submission window.' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse request body
     const submission: ApplicationSubmission = await req.json();
     console.log('Received submission:', { userId: user.id, submission });
@@ -105,21 +150,6 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-    }
-
-    // Verify user profile is complete
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('profile_completed')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.profile_completed) {
-      console.error('Profile check error:', profileError);
-      return new Response(
-        JSON.stringify({ error: 'Profile must be completed before submitting application' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     // Check for duplicate application

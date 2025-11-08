@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, RefreshCw, Users, GraduationCap, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, GraduationCap, Plus, Trash2, Settings, Clock, FileText, AlertCircle, Settings2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Batch {
   id: string;
@@ -21,6 +25,13 @@ interface Batch {
   end_year: number;
   current_semester: number;
   student_count: number;
+}
+
+interface BatchSettings {
+  batch_name: string;
+  enabled: boolean;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
 }
 
 const UpdateSemester = () => {
@@ -44,15 +55,26 @@ const UpdateSemester = () => {
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Global submission settings
+  const [globalEnabled, setGlobalEnabled] = useState(true);
+  const [scheduledStart, setScheduledStart] = useState<string>('');
+  const [scheduledEnd, setScheduledEnd] = useState<string>('');
+  const [isUpdatingGlobal, setIsUpdatingGlobal] = useState(false);
+
+  // Batch-specific settings
+  const [batchSettings, setBatchSettings] = useState<Map<string, BatchSettings>>(new Map());
+  const [editingBatch, setEditingBatch] = useState<string | null>(null);
+
   useEffect(() => {
     fetchBatches();
+    fetchSubmissionSettings();
   }, []);
 
   const fetchBatches = async () => {
     setIsLoading(true);
     try {
       // Fetch batches with student counts
-      const { data: batchData, error: batchError } = await (supabase as any)
+      const { data: batchData, error: batchError} = await (supabase as any)
         .from('batches')
         .select('*')
         .order('start_year', { ascending: false });
@@ -85,6 +107,194 @@ const UpdateSemester = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchSubmissionSettings = async () => {
+    try {
+      // Fetch global settings
+      const { data: globalData, error: globalError } = await supabase
+        .from('global_submission_settings')
+        .select('*')
+        .single();
+
+      if (globalError) {
+        console.error('Error fetching global settings:', globalError);
+      } else if (globalData) {
+        setGlobalEnabled(globalData.enabled);
+        setScheduledStart(globalData.scheduled_start || '');
+        setScheduledEnd(globalData.scheduled_end || '');
+      }
+
+      // Fetch batch-specific settings
+      const { data: batchData, error: batchError } = await supabase
+        .from('batch_submission_settings')
+        .select('*');
+
+      if (batchError) {
+        console.error('Error fetching batch settings:', batchError);
+      } else if (batchData) {
+        const settingsMap = new Map<string, BatchSettings>();
+        batchData.forEach((setting: any) => {
+          settingsMap.set(setting.batch_name, setting);
+        });
+        setBatchSettings(settingsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching submission settings:', error);
+    }
+  };
+
+  const handleToggleGlobal = async (enabled: boolean) => {
+    setIsUpdatingGlobal(true);
+    try {
+      const { error } = await supabase
+        .from('global_submission_settings')
+        .update({ 
+          enabled,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        })
+        .eq('id', (await supabase.from('global_submission_settings').select('id').single()).data?.id);
+
+      if (error) throw error;
+
+      setGlobalEnabled(enabled);
+      toast({
+        title: "Success",
+        description: `Student submissions ${enabled ? 'enabled' : 'disabled'} globally`,
+      });
+    } catch (error) {
+      console.error('Error toggling global submissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update submission setting",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingGlobal(false);
+    }
+  };
+
+  const handleUpdateSchedule = async () => {
+    setIsUpdatingGlobal(true);
+    try {
+      const { error } = await supabase
+        .from('global_submission_settings')
+        .update({ 
+          scheduled_start: scheduledStart || null,
+          scheduled_end: scheduledEnd || null,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        })
+        .eq('id', (await supabase.from('global_submission_settings').select('id').single()).data?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Schedule updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update schedule",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingGlobal(false);
+    }
+  };
+
+  const handleToggleBatch = async (batchName: string, enabled: boolean) => {
+    try {
+      const existing = batchSettings.get(batchName);
+      
+      if (existing) {
+        // Update existing
+        const { error } = await supabase
+          .from('batch_submission_settings')
+          .update({ 
+            enabled,
+            updated_at: new Date().toISOString(),
+            updated_by: user?.id
+          })
+          .eq('batch_name', batchName);
+
+        if (error) throw error;
+      } else {
+        // Create new
+        const { error } = await supabase
+          .from('batch_submission_settings')
+          .insert({ 
+            batch_name: batchName,
+            enabled,
+            updated_by: user?.id
+          });
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      const newSettings = new Map(batchSettings);
+      newSettings.set(batchName, {
+        batch_name: batchName,
+        enabled,
+        scheduled_start: existing?.scheduled_start || null,
+        scheduled_end: existing?.scheduled_end || null
+      });
+      setBatchSettings(newSettings);
+
+      toast({
+        title: "Success",
+        description: `Submissions ${enabled ? 'enabled' : 'disabled'} for ${batchName}`,
+      });
+    } catch (error) {
+      console.error('Error toggling batch submissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update batch setting",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getStatusMessage = () => {
+    const now = new Date();
+    
+    if (!globalEnabled) {
+      return "❌ Submissions are currently disabled globally";
+    }
+    
+    if (scheduledStart) {
+      const start = new Date(scheduledStart);
+      if (now < start) {
+        return `⏳ Submissions will open on ${start.toLocaleString()}`;
+      }
+    }
+    
+    if (scheduledEnd) {
+      const end = new Date(scheduledEnd);
+      if (now > end) {
+        return "⏰ Scheduled submission window has closed";
+      }
+      return `⏰ Submissions will close on ${end.toLocaleString()}`;
+    }
+    
+    return "✅ Submissions are currently open";
+  };
+
+  const getBatchStatus = (batchName: string): "default" | "destructive" | "secondary" => {
+    const settings = batchSettings.get(batchName);
+    if (!settings) {
+      return globalEnabled ? "default" : "destructive";
+    }
+    return settings.enabled ? "default" : "destructive";
+  };
+
+  const getBatchEnabled = (batchName: string): boolean => {
+    const settings = batchSettings.get(batchName);
+    return settings ? settings.enabled : globalEnabled;
   };
 
   const selectedBatchData = batches.find(b => b.name === selectedBatch);
@@ -327,6 +537,85 @@ const UpdateSemester = () => {
           </Dialog>
         </div>
 
+        {/* Global Submission Control Card */}
+        <Card className="mb-6 border-2 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                <CardTitle>Global Submission Control</CardTitle>
+              </div>
+              <Badge variant={globalEnabled ? "default" : "destructive"}>
+                {globalEnabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </div>
+            <CardDescription>
+              Master control for all no-due form submissions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Master toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div>
+                <h4 className="font-semibold mb-1">Enable Submissions</h4>
+                <p className="text-sm text-muted-foreground">
+                  Master switch to enable/disable all submissions
+                </p>
+              </div>
+              <Switch
+                checked={globalEnabled}
+                onCheckedChange={handleToggleGlobal}
+                disabled={isUpdatingGlobal}
+              />
+            </div>
+
+            {/* Schedule settings */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Schedule Opening/Closing Times
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Opens At (Optional)</Label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledStart}
+                    onChange={(e) => setScheduledStart(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty for no start time restriction
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Closes At (Optional)</Label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledEnd}
+                    onChange={(e) => setScheduledEnd(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty for no end time restriction
+                  </p>
+                </div>
+                <Button onClick={handleUpdateSchedule} disabled={isUpdatingGlobal}>
+                  {isUpdatingGlobal ? 'Saving...' : 'Save Schedule'}
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Status message */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {getStatusMessage()}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Selection Panel */}
           <Card className="shadow-md">
@@ -436,7 +725,12 @@ const UpdateSemester = () => {
                     <Card key={batch.id} className="border">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-foreground">{batch.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">{batch.name}</h4>
+                            <Badge variant={getBatchStatus(batch.name)} className="text-xs">
+                              {getBatchEnabled(batch.name) ? 'Open' : 'Closed'}
+                            </Badge>
+                          </div>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm text-muted-foreground">{batch.student_count}</span>

@@ -72,6 +72,8 @@ const StudentDashboard = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [submissionsAllowed, setSubmissionsAllowed] = useState(true);
+  const [submissionMessage, setSubmissionMessage] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -103,6 +105,9 @@ const StudentDashboard = () => {
 
       setProfile(profileData);
 
+      // Check submission status
+      await checkSubmissionStatus(profileData.batch);
+
       // Fetch student applications
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
@@ -118,6 +123,65 @@ const StudentDashboard = () => {
       toast.error('Failed to load dashboard data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkSubmissionStatus = async (batchName: string) => {
+    try {
+      // Check batch-specific settings first
+      const { data: batchSetting } = await supabase
+        .from('batch_submission_settings')
+        .select('*')
+        .eq('batch_name', batchName)
+        .maybeSingle();
+
+      const now = new Date();
+      let settings = batchSetting;
+
+      // If no batch-specific settings, use global
+      if (!settings) {
+        const { data: globalSetting } = await supabase
+          .from('global_submission_settings')
+          .select('*')
+          .maybeSingle();
+        settings = globalSetting;
+      }
+
+      if (!settings) {
+        setSubmissionsAllowed(true);
+        return;
+      }
+
+      // Check enabled flag
+      if (!settings.enabled) {
+        setSubmissionsAllowed(false);
+        setSubmissionMessage('Submissions are currently disabled by administration');
+        return;
+      }
+
+      // Check schedule
+      if (settings.scheduled_start) {
+        const start = new Date(settings.scheduled_start);
+        if (now < start) {
+          setSubmissionsAllowed(false);
+          setSubmissionMessage(`Submissions will open on ${start.toLocaleString()}`);
+          return;
+        }
+      }
+
+      if (settings.scheduled_end) {
+        const end = new Date(settings.scheduled_end);
+        if (now > end) {
+          setSubmissionsAllowed(false);
+          setSubmissionMessage('Submission window has closed');
+          return;
+        }
+      }
+
+      setSubmissionsAllowed(true);
+    } catch (error) {
+      console.error('Error checking submission status:', error);
+      setSubmissionsAllowed(true); // Default to allowing on error
     }
   };
 
@@ -346,12 +410,30 @@ const StudentDashboard = () => {
           })}
         </div>
 
+        {/* Submission Not Available Alert */}
+        {!submissionsAllowed && (
+          <Card className="mb-6 border-2 border-warning bg-warning/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-6 w-6 text-warning flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-lg mb-1">Submissions Not Available</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {submissionMessage}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Button 
             size="lg" 
             className="h-24 text-lg"
             onClick={() => navigate('/student/submit-form')}
+            disabled={!submissionsAllowed}
           >
             <Plus className="h-6 w-6 mr-2" />
             Submit No-Due Application

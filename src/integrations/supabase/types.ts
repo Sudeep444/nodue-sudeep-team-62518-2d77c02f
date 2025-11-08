@@ -201,6 +201,44 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_submission_settings: {
+        Row: {
+          batch_name: string
+          enabled: boolean
+          id: string
+          scheduled_end: string | null
+          scheduled_start: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          batch_name: string
+          enabled?: boolean
+          id?: string
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          batch_name?: string
+          enabled?: boolean
+          id?: string
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_batch"
+            columns: ["batch_name"]
+            isOneToOne: true
+            referencedRelation: "batches"
+            referencedColumns: ["name"]
+          },
+        ]
+      }
       batches: {
         Row: {
           created_at: string | null
@@ -225,6 +263,33 @@ export type Database = {
           id?: string
           name?: string
           start_year?: number
+        }
+        Relationships: []
+      }
+      global_submission_settings: {
+        Row: {
+          enabled: boolean
+          id: string
+          scheduled_end: string | null
+          scheduled_start: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: string
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: string
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -275,6 +340,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          password_change_required: boolean | null
           phone: string | null
           photo: string | null
           profile_completed: boolean | null
@@ -291,6 +357,7 @@ export type Database = {
           email?: string | null
           id: string
           name: string
+          password_change_required?: boolean | null
           phone?: string | null
           photo?: string | null
           profile_completed?: boolean | null
@@ -307,6 +374,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          password_change_required?: boolean | null
           phone?: string | null
           photo?: string | null
           profile_completed?: boolean | null
@@ -330,6 +398,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           office_location: string | null
+          password_change_required: boolean | null
           phone: string | null
           photo: string | null
           updated_at: string | null
@@ -345,6 +414,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           office_location?: string | null
+          password_change_required?: boolean | null
           phone?: string | null
           photo?: string | null
           updated_at?: string | null
@@ -360,6 +430,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           office_location?: string | null
+          password_change_required?: boolean | null
           phone?: string | null
           photo?: string | null
           updated_at?: string | null
@@ -442,6 +513,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_submission_allowed: {
+        Args: { p_batch_name: string }
+        Returns: boolean
+      }
       create_audit_log: {
         Args: {
           p_action: string
