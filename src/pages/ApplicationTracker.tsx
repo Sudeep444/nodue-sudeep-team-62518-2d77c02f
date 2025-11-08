@@ -6,25 +6,53 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Eye, FileText, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Eye, FileText, Clock, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
 import { supabase } from "@/lib/supabase";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 const ApplicationTracker = () => {
   const { user } = useAuth();
   const [selectedBatch, setSelectedBatch] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [applications, setApplications] = useState<any[]>([]);
+  const [batches, setBatches] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const batches = ['2021-25', '2022-26', '2023-27', '2024-28'];
   const departments = ['MECH', 'CSE', 'CIVIL', 'EC', 'AIML', 'CD'];
+
+  useEffect(() => {
+    fetchBatches();
+  }, []);
 
   useEffect(() => {
     if (selectedBatch && selectedDepartment) {
       fetchApplications();
     }
   }, [selectedBatch, selectedDepartment]);
+
+  const fetchBatches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('name')
+        .order('start_year', { ascending: false });
+
+      if (error) throw error;
+      setBatches(data?.map((b) => b.name) || []);
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch batches",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchApplications = async () => {
     try {
@@ -42,6 +70,42 @@ const ApplicationTracker = () => {
       setApplications(data || []);
     } catch (error) {
       console.error('Error fetching applications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch applications",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteApplication = async () => {
+    if (!applicationToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-application', {
+        body: { application_id: applicationToDelete.id }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Application deleted successfully",
+      });
+
+      fetchApplications();
+      setDeleteDialogOpen(false);
+      setApplicationToDelete(null);
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete application",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -216,9 +280,21 @@ const ApplicationTracker = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setApplicationToDelete(app);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -235,6 +311,45 @@ const ApplicationTracker = () => {
             </Card>
           </>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Application</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this application? This action cannot be undone.
+                {applicationToDelete && (
+                  <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                    <p className="font-medium text-foreground">Application Details:</p>
+                    <p className="text-sm">Student: {applicationToDelete.profiles?.name}</p>
+                    <p className="text-sm">USN: {applicationToDelete.profiles?.usn}</p>
+                    <p className="text-sm">Department: {applicationToDelete.department}</p>
+                    <p className="text-sm">Batch: {applicationToDelete.batch}</p>
+                    <p className="text-sm">Semester: {applicationToDelete.semester}</p>
+                  </div>
+                )}
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive font-medium">⚠️ This will also delete:</p>
+                  <ul className="text-sm text-destructive mt-2 ml-4 list-disc">
+                    <li>All faculty assignments for this application</li>
+                    <li>All related notifications</li>
+                  </ul>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteApplication}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
