@@ -14,7 +14,9 @@ import {
   User,
   Edit,
   CreditCard,
-  Bell
+  Bell,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +25,7 @@ import { toast } from "sonner";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useNotifications } from "@/hooks/useNotifications";
 import { generateCertificateHTML } from "@/utils/certificateGenerator";
+import { Badge } from "@/components/ui/badge";
 
 interface StudentProfile {
   id: string;
@@ -37,6 +40,22 @@ interface StudentProfile {
   batch: string;
   photo?: string;
   profile_completed: boolean;
+}
+
+interface FacultyAssignment {
+  id: string;
+  faculty_verified: boolean;
+  faculty_comment?: string;
+  verified_at?: string;
+  subjects: {
+    name: string;
+    code: string;
+  };
+  staff_profiles: {
+    name: string;
+    designation: string;
+    department: string;
+  };
 }
 
 interface Application {
@@ -63,6 +82,7 @@ interface Application {
   payment_comment?: string;
   lab_comment?: string;
   transaction_id?: string;
+  faculty_assignments?: FacultyAssignment[];
 }
 
 const StudentDashboard = () => {
@@ -74,6 +94,7 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [submissionsAllowed, setSubmissionsAllowed] = useState(true);
   const [submissionMessage, setSubmissionMessage] = useState<string>('');
+  const [expandedFaculty, setExpandedFaculty] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -82,6 +103,22 @@ const StudentDashboard = () => {
     }
 
     fetchStudentData();
+
+    // Real-time subscription for faculty verifications
+    const channel = supabase
+      .channel('student-faculty-updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'application_subject_faculty'
+      }, () => {
+        fetchStudentData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, navigate]);
 
   const fetchStudentData = async () => {
@@ -117,7 +154,30 @@ const StudentDashboard = () => {
 
       if (applicationsError) throw applicationsError;
 
-      setApplications(applicationsData || []);
+      // Fetch faculty assignments for each application
+      const applicationsWithFaculty = await Promise.all(
+        (applicationsData || []).map(async (app) => {
+          const { data: facultyAssignments } = await supabase
+            .from('application_subject_faculty')
+            .select(`
+              id,
+              faculty_verified,
+              faculty_comment,
+              verified_at,
+              subjects:subject_id(name, code),
+              staff_profiles:faculty_id(name, designation, department)
+            `)
+            .eq('application_id', app.id)
+            .order('created_at', { ascending: true });
+          
+          return {
+            ...app,
+            faculty_assignments: facultyAssignments || []
+          };
+        })
+      );
+
+      setApplications(applicationsWithFaculty);
     } catch (error: any) {
       console.error('Error fetching student data:', error);
       toast.error('Failed to load dashboard data');
@@ -225,11 +285,13 @@ const StudentDashboard = () => {
   };
 
   const calculateProgress = (app: Application) => {
+    const allFacultyVerified = app.faculty_assignments?.every(a => a.faculty_verified) ?? false;
+    
     const steps = [
       app.library_verified,
       profile?.student_type === 'hostel' ? app.hostel_verified : true,
       app.college_office_verified,
-      app.faculty_verified,
+      allFacultyVerified,
       app.hod_verified,
       app.payment_verified,
       app.lab_verified
@@ -491,6 +553,96 @@ const StudentDashboard = () => {
               <div className="space-y-4">
                 {verificationSteps.map((step, index) => {
                   if (!step.required) return null;
+                  
+                  // Special handling for Faculty verification
+                  if (step.name === "Faculty" && currentApplication.faculty_assignments?.length > 0) {
+                    const allFacultyVerified = currentApplication.faculty_assignments.every(a => a.faculty_verified);
+                    const verifiedCount = currentApplication.faculty_assignments.filter(a => a.faculty_verified).length;
+                    const totalCount = currentApplication.faculty_assignments.length;
+                    
+                    return (
+                      <div key={step.name}>
+                        <div 
+                          className="flex items-start gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+                          onClick={() => setExpandedFaculty(!expandedFaculty)}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            allFacultyVerified
+                              ? 'bg-success/20 text-success' 
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {allFacultyVerified ? (
+                              <CheckCircle2 className="h-6 w-6" />
+                            ) : (
+                              <Clock className="h-6 w-6" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-base">Faculty Verification</p>
+                            <p className="text-sm mt-1">
+                              {verifiedCount} of {totalCount} faculty verified
+                            </p>
+                          </div>
+                          {expandedFaculty ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          )}
+                        </div>
+                        
+                        {/* Detailed Faculty Assignments */}
+                        {expandedFaculty && (
+                          <div className="space-y-3 mt-3 pl-4">
+                            {currentApplication.faculty_assignments.map((assignment) => (
+                              <div key={assignment.id} className="border rounded-lg p-4 bg-card">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <p className="font-semibold">
+                                        {assignment.subjects.name} ({assignment.subjects.code})
+                                      </p>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Faculty: {assignment.staff_profiles.name}
+                                      <span className="ml-2 text-xs">
+                                        ({assignment.staff_profiles.designation}, {assignment.staff_profiles.department})
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1">
+                                    {assignment.faculty_verified ? (
+                                      <>
+                                        <Badge className="bg-success/10 text-success border-success/20">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                                          Verified
+                                        </Badge>
+                                        {assignment.verified_at && (
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(assignment.verified_at).toLocaleDateString()}
+                                          </p>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        Pending
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                {assignment.faculty_comment && (
+                                  <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                                    <p className="text-xs text-muted-foreground mb-1">Faculty Comment:</p>
+                                    <p>{assignment.faculty_comment}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                   
                   return (
                     <div key={step.name} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
