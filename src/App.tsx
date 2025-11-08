@@ -42,6 +42,10 @@ import CollegeOfficeProfile from "./pages/CollegeOfficeProfile";
 import EditCollegeOfficeProfile from "./pages/EditCollegeOfficeProfile";
 import LibraryProfile from "./pages/LibraryProfile";
 import EditLibraryProfile from "./pages/EditLibraryProfile";
+import ControlPanel from "./pages/ControlPanel";
+import ControlPanelStudents from "./pages/ControlPanelStudents";
+import ControlPanelFaculty from "./pages/ControlPanelFaculty";
+import ControlPanelStaff from "./pages/ControlPanelStaff";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -367,6 +371,39 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="college_office">
                   <EditCollegeOfficeProfile />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Control Panel Routes */}
+            <Route 
+              path="/admin/control-panel" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ControlPanel />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/control-panel/students" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ControlPanelStudents />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/control-panel/faculty" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ControlPanelFaculty />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/control-panel/staff" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ControlPanelStaff />
                 </ProtectedRoute>
               } 
             />

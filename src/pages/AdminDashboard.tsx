@@ -196,6 +196,13 @@ const AdminDashboard = () => {
       icon: Settings,
       href: "/admin/update-semester",
       color: "bg-accent"
+    },
+    {
+      title: "Control Panel",
+      description: "Manage faculty, students, and staff accounts",
+      icon: Settings,
+      href: "/admin/control-panel",
+      color: "bg-primary"
     }
   ];
 
