@@ -171,42 +171,18 @@ const SubmitNoDueForm = () => {
 
   const fetchCounsellors = async () => {
     try {
-      const { data: staffData, error: staffError } = await supabase
+      // Fetch all active faculty from staff_profiles (similar to subject faculty selection)
+      const { data, error } = await supabase
         .from('staff_profiles')
-        .select('id, name, designation, department, is_active')
-        .eq('is_active', true);
+        .select('id, name, designation, department')
+        .eq('is_active', true)
+        .order('designation', { ascending: true })
+        .order('department', { ascending: true })
+        .order('name', { ascending: true });
 
-      if (staffError) throw staffError;
+      if (error) throw error;
 
-      const staffIds = staffData?.map(s => s.id) || [];
-      
-      // Get staff who have BOTH faculty role AND counsellor role
-      const { data: facultyRoles, error: facultyError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'faculty')
-        .in('user_id', staffIds);
-
-      if (facultyError) throw facultyError;
-
-      const facultyIds = new Set(facultyRoles?.map(r => r.user_id) || []);
-
-      const { data: counsellorRoles, error: counsellorError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'counsellor')
-        .in('user_id', staffIds);
-
-      if (counsellorError) throw counsellorError;
-
-      const counsellorIds = new Set(counsellorRoles?.map(r => r.user_id) || []);
-      
-      // Filter for staff who have both faculty and counsellor roles
-      const counsellors = staffData?.filter(s => 
-        facultyIds.has(s.id) && counsellorIds.has(s.id)
-      ) || [];
-      
-      setCounsellorList(counsellors);
+      setCounsellorList(data || []);
     } catch (error: any) {
       console.error('Error fetching counsellors:', error);
       toast.error('Failed to load counsellors');
@@ -215,42 +191,18 @@ const SubmitNoDueForm = () => {
 
   const fetchClassAdvisors = async () => {
     try {
-      const { data: staffData, error: staffError } = await supabase
+      // Fetch all active faculty from staff_profiles (similar to subject faculty selection)
+      const { data, error } = await supabase
         .from('staff_profiles')
-        .select('id, name, designation, department, is_active')
-        .eq('is_active', true);
+        .select('id, name, designation, department')
+        .eq('is_active', true)
+        .order('designation', { ascending: true })
+        .order('department', { ascending: true })
+        .order('name', { ascending: true });
 
-      if (staffError) throw staffError;
+      if (error) throw error;
 
-      const staffIds = staffData?.map(s => s.id) || [];
-      
-      // Get staff who have BOTH faculty role AND class_advisor role
-      const { data: facultyRoles, error: facultyError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'faculty')
-        .in('user_id', staffIds);
-
-      if (facultyError) throw facultyError;
-
-      const facultyIds = new Set(facultyRoles?.map(r => r.user_id) || []);
-
-      const { data: advisorRoles, error: advisorError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'class_advisor')
-        .in('user_id', staffIds);
-
-      if (advisorError) throw advisorError;
-
-      const advisorIds = new Set(advisorRoles?.map(r => r.user_id) || []);
-      
-      // Filter for staff who have both faculty and class_advisor roles
-      const advisors = staffData?.filter(s => 
-        facultyIds.has(s.id) && advisorIds.has(s.id)
-      ) || [];
-      
-      setClassAdvisorList(advisors);
+      setClassAdvisorList(data || []);
     } catch (error: any) {
       console.error('Error fetching class advisors:', error);
       toast.error('Failed to load class advisors');
