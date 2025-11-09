@@ -379,21 +379,21 @@ serve(async (req) => {
       });
     }
 
-    // Notify assigned counsellor
+    // Notify assigned counsellor (informational only - no action required yet)
     await supabaseAdmin.rpc('create_notification', {
       p_user_id: submission.counsellor_id,
-      p_title: 'Student Application Assignment',
-      p_message: `${studentProfile.name} (${studentProfile.usn}) from ${studentProfile.department} has selected you as their Student Counsellor. You will be notified when the application reaches your verification stage.`,
+      p_title: 'New Student Assignment',
+      p_message: `${studentProfile.name} (${studentProfile.usn}) from ${studentProfile.department} has selected you as their Student Counsellor. The application is currently in the faculty verification stage. You will be notified when it's ready for your review.`,
       p_type: 'info',
       p_related_entity_type: 'application',
       p_related_entity_id: appData.id,
     });
 
-    // Notify assigned class advisor
+    // Notify assigned class advisor (informational only - no action required yet)
     await supabaseAdmin.rpc('create_notification', {
       p_user_id: submission.class_advisor_id,
-      p_title: 'Student Application Assignment',
-      p_message: `${studentProfile.name} (${studentProfile.usn}) from ${studentProfile.department} has selected you as their Class Advisor. You will be notified when the application reaches your verification stage.`,
+      p_title: 'New Student Assignment',
+      p_message: `${studentProfile.name} (${studentProfile.usn}) from ${studentProfile.department} has selected you as their Class Advisor. The application is currently in the early verification stages. You will be notified when it's ready for your review.`,
       p_type: 'info',
       p_related_entity_type: 'application',
       p_related_entity_id: appData.id,
