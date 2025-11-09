@@ -602,6 +602,13 @@ export type Database = {
         }
         Returns: string
       }
+      ensure_staff_has_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       get_users_by_role: {
         Args: { role_name: Database["public"]["Enums"]["app_role"] }
         Returns: {
