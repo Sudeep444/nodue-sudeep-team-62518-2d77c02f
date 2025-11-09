@@ -203,7 +203,7 @@ export default function FacultyDashboard() {
         const notificationMessage = !approved 
           ? `Your application was rejected by faculty. Reason: ${comment || 'Not specified'}`
           : allVerified 
-            ? `All faculty members have verified your subjects. Your application is now proceeding to HOD verification. ${comment || ''}`
+            ? `All faculty members have verified your subjects. Your application is now proceeding to Counsellor verification. ${comment || ''}`
             : `Faculty verification in progress. ${comment || ''}`;
 
         await (supabase as any)

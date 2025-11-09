@@ -257,7 +257,7 @@ export default function HODDashboard() {
           : isReapproval
             ? `Your previously rejected application has been re-approved by faculty (${profile?.name}). ${comment || ''}`
             : allVerified 
-              ? `All faculty members have verified your subjects. Your application is now proceeding to HOD verification.`
+              ? `All faculty members have verified your subjects. Your application is now proceeding to Counsellor verification.`
               : `Faculty verification in progress.`;
 
         await supabase
