@@ -96,6 +96,62 @@ const Notifications = () => {
 
   const unreadCount = roleFilteredNotifications.filter(n => !n.read).length;
 
+  // Get role-specific titles and descriptions
+  const getRoleTitle = () => {
+    const roleTitles: Record<string, string> = {
+      'counsellor': 'Counsellor Notifications',
+      'class_advisor': 'Class Advisor Notifications',
+      'faculty': 'Faculty Notifications',
+      'hod': 'HOD Notifications',
+      'library': 'Library Notifications',
+      'hostel': 'Hostel Notifications',
+      'lab_instructor': 'Lab Instructor Notifications',
+      'college_office': 'College Office Notifications',
+    };
+    return currentRole ? roleTitles[currentRole] : 'All Notifications';
+  };
+
+  const getRoleDescription = () => {
+    if (!currentRole) {
+      return unreadCount > 0 
+        ? `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
+        : 'You\'re all caught up!';
+    }
+
+    const roleDescriptions: Record<string, string> = {
+      'counsellor': 'Applications ready for your counsellor verification',
+      'class_advisor': 'Applications ready for your class advisor verification',
+      'faculty': 'Subject verification requests and faculty updates',
+      'hod': 'Department applications requiring HOD approval',
+      'library': 'Library clearance verification requests',
+      'hostel': 'Hostel clearance verification requests',
+      'lab_instructor': 'Lab payment verification requests',
+      'college_office': 'College office verification requests',
+    };
+
+    const baseDesc = roleDescriptions[currentRole] || 'Your notifications';
+    return unreadCount > 0 
+      ? `${unreadCount} pending notification${unreadCount === 1 ? '' : 's'} - ${baseDesc}`
+      : `${baseDesc} - You're all caught up!`;
+  };
+
+  const getEmptyStateMessage = () => {
+    if (!currentRole) return "We'll notify you when something important happens";
+
+    const emptyMessages: Record<string, string> = {
+      'counsellor': 'No applications are ready for counsellor verification',
+      'class_advisor': 'No applications are ready for class advisor verification',
+      'faculty': 'No subject verification requests at this time',
+      'hod': 'No applications pending HOD approval',
+      'library': 'No library clearance requests',
+      'hostel': 'No hostel clearance requests',
+      'lab_instructor': 'No payment verification requests',
+      'college_office': 'No college office verification requests',
+    };
+
+    return emptyMessages[currentRole] || "We'll notify you when something important happens";
+  };
+
   const handleDelete = () => {
     if (deleteId) {
       deleteNotification(deleteId);
@@ -130,12 +186,9 @@ const Notifications = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>All Notifications</CardTitle>
+            <CardTitle>{getRoleTitle()}</CardTitle>
             <CardDescription>
-              {unreadCount > 0 
-                ? `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
-                : 'You\'re all caught up!'
-              }
+              {getRoleDescription()}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -158,7 +211,7 @@ const Notifications = () => {
                     <p>No {filter === 'all' ? '' : filter} notifications</p>
                     <p className="text-sm mt-2">
                       {filter === 'all' 
-                        ? "We'll notify you when something important happens"
+                        ? getEmptyStateMessage()
                         : `You don't have any ${filter} notifications`
                       }
                     </p>
