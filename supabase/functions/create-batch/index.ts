@@ -60,9 +60,9 @@ Deno.serve(async (req) => {
 
     // Validate years
     const currentYear = new Date().getFullYear();
-    if (startYear > currentYear + 1) {
+    if (startYear > currentYear + 5) {
       return new Response(
-        JSON.stringify({ error: 'Start year cannot be more than 1 year in the future' }),
+        JSON.stringify({ error: 'Start year cannot be more than 5 years in the future' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
