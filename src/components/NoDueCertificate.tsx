@@ -73,12 +73,12 @@ const ClearanceItem = ({
   date: string; 
   comment?: string;
 }) => (
-  <div className="py-3">
-    <div className="flex items-center gap-2 mb-2">
-      <CheckCircle2 className="h-5 w-5 text-green-600" />
-      <span className="font-semibold text-foreground">{name}</span>
+  <div className="py-1.5">
+    <div className="flex items-center gap-2 mb-1">
+      <CheckCircle2 className="h-4 w-4 text-green-600" />
+      <span className="font-semibold text-foreground text-sm">{name}</span>
     </div>
-    <div className="ml-7 text-sm text-muted-foreground">
+    <div className="ml-6 text-xs text-muted-foreground">
       <div>Verified on: {date}</div>
       <div className="italic">Remarks: {comment || 'No remarks'}</div>
     </div>
@@ -90,27 +90,27 @@ export const NoDueCertificate = ({ application, profile }: NoDueCertificateProps
   const isHostelStudent = profile.student_type === 'hostel';
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardContent className="p-8">
+    <Card className="max-w-4xl mx-auto print:shadow-none">
+      <CardContent className="p-4 print:p-6">
         {/* Header */}
-        <div className="text-center mb-8 pb-6 border-b-2 border-border">
-          <h1 className="text-3xl font-bold text-foreground mb-2 uppercase tracking-wide">
+        <div className="text-center mb-4 pb-3 border-b-2 border-border">
+          <h1 className="text-2xl font-bold text-foreground mb-1 uppercase tracking-wide">
             No Objection Certificate
           </h1>
-          <h2 className="text-xl font-semibold text-muted-foreground">
+          <h2 className="text-lg font-semibold text-muted-foreground">
             Clearance Certificate
           </h2>
         </div>
 
         {/* Intro */}
-        <p className="text-center text-muted-foreground mb-8 leading-relaxed">
+        <p className="text-center text-muted-foreground text-sm mb-4 leading-snug">
           This is to certify that the following student has successfully cleared all 
           requirements and has no pending dues or obligations with the institution.
         </p>
 
         {/* Student Details */}
-        <div className="bg-muted/50 p-6 rounded-lg mb-8 border-l-4 border-primary">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="bg-muted/50 p-4 rounded-lg mb-4 border-l-4 border-primary">
+          <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex gap-2">
               <span className="font-semibold text-foreground">Name:</span>
               <span className="text-muted-foreground">{profile.name}</span>
@@ -140,12 +140,12 @@ export const NoDueCertificate = ({ application, profile }: NoDueCertificateProps
 
         {/* Clearance Details */}
         <div>
-          <h3 className="text-xl font-bold text-foreground mb-4 uppercase tracking-wide">
+          <h3 className="text-lg font-bold text-foreground mb-2 uppercase tracking-wide">
             Clearance Details
           </h3>
-          <Separator className="mb-4" />
+          <Separator className="mb-2" />
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <ClearanceItem 
               name="Library Clearance"
               date={formatDate(application.updated_at)}
@@ -190,12 +190,12 @@ export const NoDueCertificate = ({ application, profile }: NoDueCertificateProps
               comment={application.hod_comment}
             />
             
-            <div className="py-3">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span className="font-semibold text-foreground">Lab Charges Payment</span>
+            <div className="py-1.5">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="font-semibold text-foreground text-sm">Lab Charges Payment</span>
               </div>
-              <div className="ml-7 text-sm text-muted-foreground">
+              <div className="ml-6 text-xs text-muted-foreground">
                 <div>Transaction ID: {application.transaction_id || 'N/A'}</div>
                 <div>Verified on: {formatDate(application.updated_at)}</div>
                 <div className="italic">Remarks: {application.payment_comment || 'No remarks'}</div>
@@ -211,15 +211,15 @@ export const NoDueCertificate = ({ application, profile }: NoDueCertificateProps
         </div>
 
         {/* Footer */}
-        <Separator className="my-6" />
-        <div className="text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
+        <Separator className="my-3" />
+        <div className="text-center space-y-1">
+          <p className="text-xs text-muted-foreground">
             Certificate Generated: {currentDate}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Application ID: {application.id}
           </p>
-          <p className="text-xs text-muted-foreground italic mt-4">
+          <p className="text-[10px] text-muted-foreground italic mt-2">
             This certificate is valid and verifies that the student has no pending dues or obligations.
           </p>
         </div>
