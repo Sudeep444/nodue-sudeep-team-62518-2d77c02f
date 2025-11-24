@@ -175,86 +175,24 @@ export default function FacultyDashboard() {
 
       if (updateError) throw updateError;
 
-      // Check if ALL faculty members have verified this application
-      const { data: allAssignments, error: checkError } = await supabase
-        .from('application_subject_faculty')
-        .select('faculty_verified')
-        .eq('application_id', applicationId);
+      // Note: The database trigger will automatically update faculty_verified status
+      // when all faculty have verified their assignments
+      
+      // Notify student about the verification
+      const notificationMessage = !approved 
+        ? `Your application was rejected by faculty. Reason: ${comment || 'Not specified'}`
+        : `${staffProfile?.name || 'A faculty member'} has verified your subjects. ${comment || ''}`;
 
-      if (checkError) throw checkError;
-
-      const allVerified = allAssignments?.every(a => a.faculty_verified === true);
-
-      // If all faculty have verified OR if rejected, update the main application
-      if (allVerified || !approved) {
-        const { error: appError } = await (supabase as any)
-          .from('applications')
-          .update({
-            faculty_verified: approved && allVerified,
-            faculty_comment: comment || null,
-            status: !approved ? 'rejected' : (allVerified ? 'faculty_verified' : 'college_office_verified'),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', applicationId);
-
-        if (appError) throw appError;
-
-        // Only notify if all verified or rejected
-        const notificationMessage = !approved 
-          ? `Your application was rejected by faculty. Reason: ${comment || 'Not specified'}`
-          : allVerified 
-            ? `All faculty members have verified your subjects. Your application is now proceeding to Counsellor verification. ${comment || ''}`
-            : `Faculty verification in progress. ${comment || ''}`;
-
-        await (supabase as any)
-          .from('notifications')
-          .insert({
-            user_id: selectedApp.student_id,
-            title: !approved ? 'Application Rejected' : allVerified ? 'All Faculty Verified' : 'Faculty Verification Update',
-            message: notificationMessage,
-            type: !approved ? 'rejection' : 'approval',
-            related_entity_type: 'application',
-            related_entity_id: applicationId
-          });
-
-        // Notify assigned counsellor when all faculty have verified
-        if (approved && allVerified) {
-          const { data: appData } = await supabase
-            .from('applications')
-            .select('counsellor_id')
-            .eq('id', applicationId)
-            .single();
-
-          if (appData?.counsellor_id) {
-            const { error: notificationError } = await supabase
-              .from('notifications')
-              .insert({
-                user_id: appData.counsellor_id,
-                title: 'Application Ready for Counsellor Verification',
-                message: `${selectedApp.profiles.name} (${selectedApp.profiles.usn}) from ${selectedApp.department} - Semester ${selectedApp.profiles.semester} has been verified by all faculty members and is ready for your counsellor verification.`,
-                type: 'info' as const,
-                related_entity_type: 'application',
-                related_entity_id: applicationId
-              });
-
-            if (notificationError) {
-              console.error('Failed to notify counsellor:', notificationError);
-            }
-          }
-        }
-      } else {
-        // Partial verification notification
-        await (supabase as any)
-          .from('notifications')
-          .insert({
-            user_id: selectedApp.student_id,
-            title: 'Subject Verification Completed',
-            message: `${staffProfile?.name || 'A faculty member'} has verified your subjects. Waiting for other faculty verifications. ${comment || ''}`,
-            type: 'info',
-            related_entity_type: 'application',
-            related_entity_id: applicationId
-          });
-      }
+      await (supabase as any)
+        .from('notifications')
+        .insert({
+          user_id: selectedApp.student_id,
+          title: !approved ? 'Application Rejected' : 'Faculty Verification Update',
+          message: notificationMessage,
+          type: !approved ? 'rejection' : 'info',
+          related_entity_type: 'application',
+          related_entity_id: applicationId
+        });
 
       toast({
         title: "Success!",

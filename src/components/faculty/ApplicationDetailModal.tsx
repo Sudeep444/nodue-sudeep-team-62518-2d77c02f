@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Mail, Phone, Building2, Hash } from "lucide-react";
+import { CheckCircle, XCircle, Mail, Phone, Building2, Hash, Clock } from "lucide-react";
 import { useState } from "react";
 import VerificationStatusBadge from "./VerificationStatusBadge";
 
@@ -103,9 +103,57 @@ export default function ApplicationDetailModal({
             </div>
           </div>
 
+          {/* Faculty Verification Progress */}
+          {application.faculty_assignments && application.faculty_assignments.length > 0 && (
+            <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950/30">
+              <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Faculty Verification Progress
+              </h3>
+              <div className="space-y-2">
+                {application.faculty_assignments.map((assignment: any) => (
+                  <div key={assignment.id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{assignment.subject_name}</p>
+                      <p className="text-xs text-muted-foreground">{assignment.subject_code}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {assignment.faculty_verified ? (
+                        <Badge variant="default" className="bg-green-600">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Pending
+                        </Badge>
+                      )}
+                      {assignment.verified_at && (
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(assignment.verified_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+                <p className="font-semibold text-sm">
+                  {application.faculty_assignments.filter((a: any) => a.faculty_verified).length} of {application.faculty_assignments.length} subjects verified
+                </p>
+                {application.faculty_assignments.every((a: any) => a.faculty_verified) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ✓ All faculty verifications complete
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Verification Status */}
           <div className="border rounded-lg p-4">
-            <h3 className="font-semibold mb-4 text-foreground">Verification Status</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Overall Verification Status</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <VerificationStatusBadge verified={application.college_office_verified} label="College Office" />
               <VerificationStatusBadge verified={application.library_verified} label="Library" />

@@ -194,6 +194,19 @@ export default function ApplicationDetailModal({
                   </div>
                 </div>
 
+                {/* All Faculty Verified Confirmation */}
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900 dark:text-green-100">
+                      All Faculty Verifications Complete
+                    </h3>
+                  </div>
+                  <p className="text-sm text-green-800 dark:text-green-200 mb-3">
+                    All selected faculty members have verified their respective subjects for this application.
+                  </p>
+                </div>
+
                 <div>
                   <h4 className="font-semibold mb-3">Verification Timeline</h4>
                   <div className="space-y-3">
@@ -227,7 +240,7 @@ export default function ApplicationDetailModal({
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                       <div>
                         <p className="font-medium">Faculty Approvals</p>
-                        <p className="text-sm text-muted-foreground">All faculty verified</p>
+                        <p className="text-sm text-green-600 font-medium">✓ All faculty verified</p>
                       </div>
                     </div>
 
