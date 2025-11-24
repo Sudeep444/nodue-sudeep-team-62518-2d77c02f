@@ -84,7 +84,8 @@ const ApplicationTracker = () => {
 
   const fetchApplications = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      // Fetch applications with faculty assignments
+      const { data: appsData, error: appsError } = await (supabase as any)
         .from('applications')
         .select(`
           *,
@@ -94,8 +95,29 @@ const ApplicationTracker = () => {
         .eq('department', selectedDepartment as any)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setApplications(data || []);
+      if (appsError) throw appsError;
+
+      // Fetch faculty assignments for each application
+      const enrichedApps = await Promise.all(
+        (appsData || []).map(async (app: any) => {
+          const { data: facultyAssignments } = await supabase
+            .from('application_subject_faculty')
+            .select(`
+              id,
+              faculty_verified,
+              verified_at,
+              subjects:subject_id(name, code)
+            `)
+            .eq('application_id', app.id);
+
+          return {
+            ...app,
+            faculty_assignments: facultyAssignments || []
+          };
+        })
+      );
+
+      setApplications(enrichedApps);
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast({

@@ -227,84 +227,26 @@ export default function HODDashboard() {
 
       if (updateError) throw updateError;
 
-      // Check if ALL faculty members have verified this application
-      const { data: allAssignments, error: checkError } = await supabase
-        .from('application_subject_faculty')
-        .select('faculty_verified, verification_status')
-        .eq('application_id', applicationId);
+      // Note: The database trigger will automatically update faculty_verified status
+      // when all faculty have verified their assignments
+      
+      // Notify student
+      const notificationMessage = !approved 
+        ? `Your application was rejected by faculty (${profile?.name}). Reason: ${comment || 'Not specified'}`
+        : isReapproval
+          ? `Your previously rejected application has been re-approved by faculty (${profile?.name}). ${comment || ''}`
+          : `Faculty verification by ${profile?.name} completed. ${comment || ''}`;
 
-      if (checkError) throw checkError;
-
-      const allVerified = allAssignments?.every(a => a.verification_status === 'approved');
-
-      // If all faculty have verified OR if rejected OR if re-approving, update the main application
-      if (allVerified || !approved || isReapproval) {
-        const { error: appError } = await supabase
-          .from('applications')
-          .update({
-            faculty_verified: approved && allVerified,
-            faculty_comment: comment || null,
-            status: !approved ? 'rejected' : (allVerified ? 'faculty_verified' : 'college_office_verified'),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', applicationId);
-
-        if (appError) throw appError;
-
-        // Notify student
-        const notificationMessage = !approved 
-          ? `Your application was rejected by faculty (${profile?.name}). Reason: ${comment || 'Not specified'}`
-          : isReapproval
-            ? `Your previously rejected application has been re-approved by faculty (${profile?.name}). ${comment || ''}`
-            : allVerified 
-              ? `All faculty members have verified your subjects. Your application is now proceeding to Counsellor verification.`
-              : `Faculty verification in progress.`;
-
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: selectedApp.student_id,
-            title: !approved ? 'Application Rejected' : isReapproval ? 'Application Re-approved' : allVerified ? 'All Faculty Verified' : 'Faculty Verification Update',
-            message: notificationMessage,
-            type: !approved ? 'rejection' : 'approval',
-            related_entity_type: 'application',
-            related_entity_id: applicationId
-          });
-
-        // Notify assigned counsellor when all faculty have verified
-        if (approved && allVerified) {
-          const { data: appData } = await supabase
-            .from('applications')
-            .select('counsellor_id')
-            .eq('id', applicationId)
-            .single();
-
-          if (appData?.counsellor_id) {
-            await supabase
-              .from('notifications')
-              .insert({
-                user_id: appData.counsellor_id,
-                title: 'Application Ready for Counsellor Verification',
-                message: `${selectedApp.profiles.name} (${selectedApp.profiles.usn}) from ${selectedApp.department} - Semester ${selectedApp.profiles.semester} has been verified by all faculty members and is ready for your counsellor verification.`,
-                type: 'info',
-                related_entity_type: 'application',
-                related_entity_id: applicationId
-              });
-          }
-        }
-      } else {
-        // Partial verification notification
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: selectedApp.student_id,
-            title: 'Subject Verification Completed',
-            message: `${profile?.name || 'A faculty member'} has verified your subjects. Waiting for other faculty verifications.`,
-            type: 'info',
-            related_entity_type: 'application',
-            related_entity_id: applicationId
-          });
-      }
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedApp.student_id,
+          title: !approved ? 'Application Rejected' : isReapproval ? 'Application Re-approved' : 'Faculty Verification Update',
+          message: notificationMessage,
+          type: !approved ? 'rejection' : 'info',
+          related_entity_type: 'application',
+          related_entity_id: applicationId
+        });
 
       toast({
         title: "Success!",
@@ -394,11 +336,11 @@ export default function HODDashboard() {
   const teachingStats = {
     total: teachingApplications.length,
     pending: teachingApplications.filter(a => {
-      const allVerified = a.faculty_assignments?.every((fa: any) => fa.verification_status === 'approved');
+      const allVerified = a.faculty_assignments?.every((fa: any) => fa.faculty_verified === true);
       return !allVerified && a.status !== 'rejected';
     }).length,
     approved: teachingApplications.filter(a => {
-      const allVerified = a.faculty_assignments?.every((fa: any) => fa.verification_status === 'approved');
+      const allVerified = a.faculty_assignments?.every((fa: any) => fa.faculty_verified === true);
       return allVerified;
     }).length,
     rejected: teachingApplications.filter(a => a.status === 'rejected').length
@@ -412,13 +354,13 @@ export default function HODDashboard() {
     if (activeMode === 'teaching') {
       if (activeTab === 'pending') {
         return teachingApplications.filter(a => {
-          const allVerified = a.faculty_assignments?.every((fa: any) => fa.verification_status === 'approved');
+          const allVerified = a.faculty_assignments?.every((fa: any) => fa.faculty_verified === true);
           return !allVerified && a.status !== 'rejected';
         });
       }
       if (activeTab === 'approved') {
         return teachingApplications.filter(a => {
-          const allVerified = a.faculty_assignments?.every((fa: any) => fa.verification_status === 'approved');
+          const allVerified = a.faculty_assignments?.every((fa: any) => fa.faculty_verified === true);
           return allVerified;
         });
       }
