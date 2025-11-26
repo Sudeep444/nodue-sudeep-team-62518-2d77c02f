@@ -95,26 +95,6 @@ interface Application {
     name: string;
     designation: string;
   };
-  library_verifier?: {
-    name: string;
-    designation: string;
-  };
-  hostel_verifier?: {
-    name: string;
-    designation: string;
-  };
-  college_office_verifier?: {
-    name: string;
-    designation: string;
-  };
-  hod_verifier?: {
-    name: string;
-    designation: string;
-  };
-  lab_verifier?: {
-    name: string;
-    designation: string;
-  };
 }
 
 const StudentDashboard = () => {
@@ -176,18 +156,13 @@ const StudentDashboard = () => {
       // Check submission status
       await checkSubmissionStatus(profileData.batch);
 
-      // Fetch student applications with all staff member names
+      // Fetch student applications with counsellor and class advisor names
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select(`
           *,
-          counsellor:staff_profiles!counsellor_id(name, designation),
-          class_advisor:staff_profiles!class_advisor_id(name, designation),
-          library_verifier:staff_profiles!library_verified_by(name, designation),
-          hostel_verifier:staff_profiles!hostel_verified_by(name, designation),
-          college_office_verifier:staff_profiles!college_office_verified_by(name, designation),
-          hod_verifier:staff_profiles!hod_verified_by(name, designation),
-          lab_verifier:staff_profiles!lab_verified_by(name, designation)
+          counsellor:counsellor_id(name, designation),
+          class_advisor:class_advisor_id(name, designation)
         `)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false });
@@ -205,8 +180,8 @@ const StudentDashboard = () => {
               verification_status,
               faculty_comment,
               verified_at,
-              subjects:subjects!subject_id(name, code),
-              staff_profiles:staff_profiles!faculty_id(name, designation, department)
+              subjects:subject_id(name, code),
+              staff_profiles:faculty_id(name, designation, department)
             `)
             .eq('application_id', app.id)
             .order('created_at', { ascending: true });
@@ -423,25 +398,19 @@ const StudentDashboard = () => {
       name: "Library", 
       verified: currentApplication.library_verified, 
       required: true,
-      comment: currentApplication.library_comment,
-      assignedTo: currentApplication.library_verifier?.name || null,
-      designation: currentApplication.library_verifier?.designation || null
+      comment: currentApplication.library_comment 
     },
     { 
       name: "Hostel", 
       verified: currentApplication.hostel_verified, 
       required: profile?.student_type === 'hostel',
-      comment: currentApplication.hostel_comment,
-      assignedTo: currentApplication.hostel_verifier?.name || null,
-      designation: currentApplication.hostel_verifier?.designation || null
+      comment: currentApplication.hostel_comment 
     },
     { 
       name: "College Office", 
       verified: currentApplication.college_office_verified, 
       required: true,
-      comment: currentApplication.college_office_comment,
-      assignedTo: currentApplication.college_office_verifier?.name || null,
-      designation: currentApplication.college_office_verifier?.designation || null
+      comment: currentApplication.college_office_comment 
     },
     { 
       name: "Faculty", 
@@ -469,9 +438,7 @@ const StudentDashboard = () => {
       name: "HOD", 
       verified: currentApplication.hod_verified, 
       required: true,
-      comment: currentApplication.hod_comment,
-      assignedTo: currentApplication.hod_verifier?.name || null,
-      designation: currentApplication.hod_verifier?.designation || null
+      comment: currentApplication.hod_comment 
     },
     { 
       name: "Lab Charge Payment", 
@@ -483,9 +450,7 @@ const StudentDashboard = () => {
       name: "Lab Instructor", 
       verified: currentApplication.lab_verified, 
       required: true,
-      comment: currentApplication.lab_comment,
-      assignedTo: currentApplication.lab_verifier?.name || null,
-      designation: currentApplication.lab_verifier?.designation || null
+      comment: currentApplication.lab_comment 
     }
   ] : [];
 

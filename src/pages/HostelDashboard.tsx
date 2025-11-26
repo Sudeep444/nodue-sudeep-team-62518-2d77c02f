@@ -95,7 +95,6 @@ export default function HostelDashboard() {
         .from('applications')
         .update({
           hostel_verified: approved,
-          hostel_verified_by: approved ? user?.id : null,
           hostel_comment: comment || null,
           status: nextStatus,
           updated_at: new Date().toISOString()

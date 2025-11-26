@@ -108,7 +108,6 @@ export default function LabInstructorDashboard() {
         .from('applications')
         .update({
           lab_verified: approved,
-          lab_verified_by: approved ? user?.id : null,
           lab_comment: comment || null,
           payment_verified: approved, // Payment is verified along with lab
           status: approved ? 'completed' : 'rejected',

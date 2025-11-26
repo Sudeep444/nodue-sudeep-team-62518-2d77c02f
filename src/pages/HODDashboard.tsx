@@ -274,7 +274,6 @@ export default function HODDashboard() {
       
       const updateData: any = {
         hod_verified: approved,
-        hod_verified_by: approved ? user?.id : null,
         hod_comment: comment || null,
         status: approved ? 'hod_verified' : 'rejected',
         updated_at: new Date().toISOString()
