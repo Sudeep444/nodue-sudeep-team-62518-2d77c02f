@@ -157,7 +157,9 @@ export default function ApplicationDetailModal({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <VerificationStatusBadge verified={application.college_office_verified} label="College Office" />
               <VerificationStatusBadge verified={application.library_verified} label="Library" />
-              <VerificationStatusBadge verified={application.hostel_verified} label="Hostel" />
+              {application.profiles?.student_type === 'hostel' && (
+                <VerificationStatusBadge verified={application.hostel_verified} label="Hostel" />
+              )}
               <VerificationStatusBadge verified={application.lab_verified} label="Lab" />
               <VerificationStatusBadge verified={application.faculty_verified} label="Faculty" />
               <VerificationStatusBadge verified={application.counsellor_verified} label="Counsellor" />

@@ -650,8 +650,7 @@ const StudentDashboard = () => {
 
               {/* Verification Steps */}
               <div className="space-y-4">
-                {verificationSteps.map((step, index) => {
-                  if (!step.required) return null;
+                {verificationSteps.filter(step => step.required).map((step, index) => {
                   
                   // Special handling for Faculty verification - Always visible
                   if (step.name === "Faculty" && currentApplication.faculty_assignments?.length > 0) {
