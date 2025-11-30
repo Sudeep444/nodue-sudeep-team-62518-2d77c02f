@@ -805,6 +805,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assigned_faculty: {
+        Args: { _application_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
